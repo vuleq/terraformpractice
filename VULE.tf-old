@@ -1,0 +1,242 @@
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "=3.0.0"
+    }
+  }
+
+}
+provider "azurerm" {
+  features {}
+}
+
+#Create Resource Group
+resource "azurerm_resource_group" "tma-dc17" {
+  name     = "tma-dc17"
+  location = "Southeast Asia"
+}
+#Create action group
+
+resource "azurerm_monitor_action_group" "ApplicationInsightsSmartDetection" {
+  name                = "ApplicationInsightsSmartDetection"
+  resource_group_name = azurerm_resource_group.tma-dc17.name
+  #location            = "Global"
+  short_name = "vuleActGrp"
+
+  email_receiver {
+    name                    = "lqvu"
+    email_address           = "lqvu2010@gmail.com"
+    use_common_alert_schema = true
+  }
+
+  tags = {
+    environment = "dev"
+  }
+}
+
+
+# Create API Management
+
+resource "random_string" "suffix" {
+  length  = 5
+  upper   = false
+  special = false
+}
+resource "azurerm_api_management" "vule_apim" {
+  name                = "vule-apim-${random_string.suffix.result}"
+  location            = "Southeast Asia"
+  resource_group_name = azurerm_resource_group.tma-dc17.name
+  publisher_name      = "vule"
+  publisher_email     = "lqvu2010@gmail.com"
+  sku_name            = "Developer_1"
+
+  tags = {
+    environment = "dev"
+  }
+}
+
+#Create Key Vault
+
+# data "azurerm_client_config" "current" {}
+
+# resource "azurerm_key_vault" "tmadc17keyvault" {
+#   name                        = "tmadc17keyvault"
+#   location                    = "Southeast Asia"
+#   resource_group_name         = azurerm_resource_group.tma-dc17.name
+#   enabled_for_disk_encryption = true
+#   tenant_id                   = "2bd8b21a-98c7-4e10-8567-05cc202680fd"
+#   sku_name                    = "standard"
+#   soft_delete_retention_days  = 90
+#   purge_protection_enabled    = false
+
+#   access_policy {
+#     tenant_id = "2bd8b21a-98c7-4e10-8567-05cc202680fd"
+#     object_id = "0060cf98-8359-47ad-99c0-139471b0ef06"
+
+#     key_permissions = [
+#       "Get",
+#     ]
+
+#     secret_permissions = [
+#       "Get",
+#     ]
+
+#     storage_permissions = [
+#       "Get",
+#     ]
+#   }
+# }
+
+#Create Application Insights
+# resource "azurerm_log_analytics_workspace" "vule-loganalyticsws" {
+#   name                = "vule-loganalyticsws"
+#   location            = "Southeast Asia"
+#   resource_group_name = azurerm_resource_group.tma-dc17.name
+#   sku                 = "PerGB2018"
+#   retention_in_days   = 30
+# }
+
+resource "azurerm_application_insights" "vule-appinsights" {
+  name                = "vule-appinsights"
+  location            = "Southeast Asia"
+  resource_group_name = azurerm_resource_group.tma-dc17.name
+  #   workspace_id        = azurerm_log_analytics_workspace.vule-loganalyticsws.id
+  application_type = "web"
+}
+
+output "instrumentation_key" {
+  value     = azurerm_application_insights.vule-appinsights.instrumentation_key
+  sensitive = true
+}
+
+output "app_id" {
+  value = azurerm_application_insights.vule-appinsights.app_id
+}
+
+#Application Service Plan
+resource "azurerm_service_plan" "vule-asp" {
+  name                = "vule-asp"
+  location            = azurerm_resource_group.tma-dc17.location
+  resource_group_name = azurerm_resource_group.tma-dc17.name
+
+  os_type  = "Linux" # required (can be "Windows" too)
+  sku_name = "Y1"    # examples: "Y1" (Consumption), "B1", "S1", etc.
+}
+
+# resource "azurerm_service_plan" "vule-asp1" {
+#   name                = "vule-asp1"
+#   location            = azurerm_resource_group.tma-dc17.location
+#   resource_group_name = azurerm_resource_group.tma-dc17.name
+
+#   os_type  = "Linux" # required (can be "Windows" too)
+#   sku_name = "Y1"    # examples: "Y1" (Consumption), "B1", "S1", etc.
+# }
+
+resource "azurerm_service_plan" "vule-asp2" {
+  name                = "vule-asp2"
+  location            = azurerm_resource_group.tma-dc17.location
+  resource_group_name = azurerm_resource_group.tma-dc17.name
+
+  os_type  = "Windows" # required (can be "Windows" too)
+  sku_name = "Y1"    # examples: "Y1" (Consumption), "B1", "S1", etc.
+}
+
+#Create Storage Account
+
+resource "azurerm_storage_account" "vulesa" {
+  name                     = "vulensa123"
+  resource_group_name      = azurerm_resource_group.tma-dc17.name
+  location                 = "Southeast Asia"
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+# resource "azurerm_storage_account" "vulesa1" {
+#   name                     = "vulesa1"
+#   resource_group_name      = azurerm_resource_group.tma-dc17.name
+#   location                 = "Southeast Asia"
+#   account_tier             = "Standard"
+#   account_replication_type = "LRS"
+# }
+
+resource "azurerm_storage_account" "vulesa2" {
+  name                     = "vulesa2"
+  resource_group_name      = azurerm_resource_group.tma-dc17.name
+  location                 = "Southeast Asia"
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+#Create Function App
+
+resource "azurerm_linux_function_app" "vule-funcapp" {
+  name                        = "vule-funcapp"
+  location                    = "Southeast Asia"
+  resource_group_name         = azurerm_resource_group.tma-dc17.name
+  service_plan_id             = azurerm_service_plan.vule-asp.id
+  storage_account_name        = azurerm_storage_account.vulesa.name
+  storage_account_access_key  = azurerm_storage_account.vulesa.primary_access_key
+  functions_extension_version = "~4"
+
+  site_config {
+    application_stack {
+      java_version = "11"
+    }
+  }
+
+  app_settings = {
+    "FUNCTIONS_WORKER_RUNTIME"       = "java"
+    "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.vule-appinsights.instrumentation_key
+    "WEBSITE_RUN_FROM_PACKAGE"       = "1"
+  }
+}
+
+# resource "azurerm_linux_function_app" "vule-funcapp1" {
+#   name                        = "vule-funcapp1"
+#   location                    = "Southeast Asia"
+#   resource_group_name         = azurerm_resource_group.tma-dc17.name
+#   service_plan_id             = azurerm_service_plan.vule-asp1.id
+#   storage_account_name        = azurerm_storage_account.vulesa1.name
+#   storage_account_access_key  = azurerm_storage_account.vulesa1.primary_access_key
+#   functions_extension_version = "~4"
+
+#   site_config {
+#     application_stack {
+#       java_version = "11" # Updated to Java 17
+#     }
+#   }
+
+#   app_settings = {
+#     "FUNCTIONS_WORKER_RUNTIME"       = "java"
+#     "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.vule-appinsights.instrumentation_key
+#     "WEBSITE_RUN_FROM_PACKAGE"       = "1"
+#   }
+# }
+
+resource "azurerm_windows_function_app" "vule-funcapp2" {
+  name                       = "vule-funcapp2"
+  location                   = "Southeast Asia"
+  resource_group_name        = azurerm_resource_group.tma-dc17.name
+  service_plan_id            = azurerm_service_plan.vule-asp2.id
+  storage_account_name       = azurerm_storage_account.vulesa2.name
+  storage_account_access_key = azurerm_storage_account.vulesa2.primary_access_key
+  functions_extension_version = "~4"
+
+  site_config {
+    application_stack {
+      java_version = "11" # Only 1.8 and 11 are supported
+    }
+  }
+
+  app_settings = {
+    "FUNCTIONS_WORKER_RUNTIME"        = "java"
+    "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.vule-appinsights.instrumentation_key
+    "WEBSITE_RUN_FROM_PACKAGE"       = "1"
+  }
+}
+
+
+
+
+
+
