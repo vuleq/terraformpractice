@@ -20,26 +20,39 @@ on:
 
 jobs:
   terraform:
-    name: Deploy to ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
+    name: Deploy to Environment
     runs-on: ubuntu-latest
 
     env:
-      # Xác định môi trường (chữ thường)
-      ENVIRONMENT: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
+      # Mặc định ENVIRONMENT là 'dev', sẽ được ghi đè nếu cần
+      ENVIRONMENT: dev
+      # Nếu sự kiện là workflow_dispatch, sử dụng giá trị từ inputs.environment
+      INPUT_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || '' }}
+      # Nếu không phải workflow_dispatch, ánh xạ dựa trên nhánh
+      BRANCH_ENV: ${{ github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+      # Ghi đè ENVIRONMENT nếu INPUT_ENV hoặc BRANCH_ENV có giá trị
+      ENVIRONMENT_OVERRIDE: ${{ env.INPUT_ENV != '' && env.INPUT_ENV || env.BRANCH_ENV }}
 
     defaults:
       run:
-        working-directory: ./env/${{ env.ENVIRONMENT }}
+        working-directory: ./env/${{ env.ENVIRONMENT_OVERRIDE }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Debug environment variable
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Input environment: ${{ github.event.inputs.environment }}"
+          echo "ENVIRONMENT_OVERRIDE is set to: ${{ env.ENVIRONMENT_OVERRIDE }}"
+          echo "Working directory will be: ./env/${{ env.ENVIRONMENT_OVERRIDE }}"
+
       - name: Debug working directory
         run: |
           pwd
           ls -la
-        working-directory: ./env/${{ env.ENVIRONMENT }}
 
       - name: Azure Login
         uses: azure/login@v1
