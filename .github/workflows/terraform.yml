@@ -1,4 +1,4 @@
-name: Terraform CI/CD with github action
+name: Terraform CI/CD with GitHub Actions
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
       - main
       - dev
       - staging
-
   workflow_dispatch:
     inputs:
       environment:
@@ -21,6 +20,7 @@ jobs:
 
     defaults:
       run:
+        # Đảm bảo đường dẫn thư mục làm việc là đúng
         working-directory: ${{ github.event.inputs.environment }}
 
     steps:
@@ -45,16 +45,18 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
-      
-      - name: List root directory contents
-        run: ls -alh
-      
-      - name: List directory contents
-        run: ls -alh env/${{ github.event.inputs.environment }}
 
       - name: Terraform Plan
         run: terraform plan
 
-      - name: Terraform Apply
-        if: github.event.inputs.environment == 'dev'
+      - name: Terraform Apply for Dev
+        if: ${{ github.event.inputs.environment == 'dev' || github.ref == 'refs/heads/dev' }}
+        run: terraform apply -auto-approve
+
+      - name: Terraform Apply for Staging
+        if: ${{ github.event.inputs.environment == 'staging' || github.ref == 'refs/heads/staging' }}
+        run: terraform apply -auto-approve
+
+      - name: Terraform Apply for Prod
+        if: ${{ github.event.inputs.environment == 'prod' || github.ref == 'refs/heads/main' }}
         run: terraform apply -auto-approve
