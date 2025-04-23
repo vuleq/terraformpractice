@@ -23,36 +23,22 @@ jobs:
     name: Deploy to Environment
     runs-on: ubuntu-latest
 
-    env:
-      # Mặc định ENVIRONMENT là 'dev', sẽ được ghi đè nếu cần
-      ENVIRONMENT: dev
-      # Nếu sự kiện là workflow_dispatch, sử dụng giá trị từ inputs.environment
-      INPUT_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || '' }}
-      # Nếu không phải workflow_dispatch, ánh xạ dựa trên nhánh
-      BRANCH_ENV: ${{ github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
-      # Ghi đè ENVIRONMENT nếu INPUT_ENV hoặc BRANCH_ENV có giá trị
-      ENVIRONMENT_OVERRIDE: ${{ env.INPUT_ENV != '' && env.INPUT_ENV || env.BRANCH_ENV }}
-
-    defaults:
-      run:
-        working-directory: ./env/${{ env.ENVIRONMENT_OVERRIDE }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Debug environment variable
+      - name: Debug environment selection
         run: |
           echo "Event name: ${{ github.event_name }}"
           echo "Branch: ${{ github.ref }}"
           echo "Input environment: ${{ github.event.inputs.environment }}"
-          echo "ENVIRONMENT_OVERRIDE is set to: ${{ env.ENVIRONMENT_OVERRIDE }}"
-          echo "Working directory will be: ./env/${{ env.ENVIRONMENT_OVERRIDE }}"
+          echo "Working directory will be: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}"
 
       - name: Debug working directory
         run: |
           pwd
           ls -la
+        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
 
       - name: Azure Login
         uses: azure/login@v1
@@ -66,16 +52,21 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
 
       - name: Terraform Format Check
         run: terraform fmt -check
+        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
 
       - name: Terraform Validate
         run: terraform validate
+        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
 
       - name: Terraform Plan
         run: terraform plan
+        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
 
       - name: Terraform Apply
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: terraform apply -auto-approve
+        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
