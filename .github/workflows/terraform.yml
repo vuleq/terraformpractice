@@ -21,7 +21,7 @@ jobs:
     defaults:
       run:
         # Đảm bảo đường dẫn thư mục làm việc là đúng
-        working-directory: ${{ github.event.inputs.environment }}
+        working-directory: ../env/${{ github.event.inputs.environment }}
 
     steps:
       - name: Checkout repository
