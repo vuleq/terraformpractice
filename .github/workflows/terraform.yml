@@ -39,20 +39,14 @@ jobs:
           else
             echo "environment=dev" >> $GITHUB_OUTPUT
           fi
-          
-      - name: Debug environment selection
-        run: |
-          echo "Event name: ${{ github.event_name }}"
-          echo "Branch: ${{ github.ref }}"
-          echo "Input environment: ${{ github.event.inputs.environment }}"
-          echo "Selected environment: ${{ steps.set-env.outputs.environment }}"
-          echo "Working directory will be: ./env/${{ steps.set-env.outputs.environment }}"
 
-      - name: Debug working directory
+      - name: Check environment directory exists
         run: |
-          pwd
-          ls -la
-        working-directory: ./env/${{ steps.set-env.outputs.environment }}
+          DIR="./env/${{ steps.set-env.outputs.environment }}"
+          if [ ! -d "$DIR" ]; then
+            echo "❌ ERROR: Directory $DIR does not exist!"
+            exit 1
+          fi
 
       - name: Azure Login
         uses: azure/login@v1
