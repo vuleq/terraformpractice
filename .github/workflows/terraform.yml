@@ -25,9 +25,7 @@ jobs:
 
     env:
       # Xác định môi trường (chữ thường)
-      ENV_LOWER: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
-      # Ánh xạ sang tên thư mục thực tế (chữ hoa: Dev, Staging, Prod)
-      ENVIRONMENT: ${{ env.ENV_LOWER == 'dev' && 'Dev' || env.ENV_LOWER == 'staging' && 'Staging' || env.ENV_LOWER == 'prod' && 'Prod' || 'Dev' }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
 
     defaults:
       run:
