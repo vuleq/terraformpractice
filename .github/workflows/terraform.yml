@@ -1,6 +1,12 @@
 name: Terraform CI/CD with github action
 
 on:
+  push:
+    branches:
+      - main
+      - dev
+      - staging
+
   workflow_dispatch:
     inputs:
       environment:
