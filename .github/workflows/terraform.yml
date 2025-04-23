@@ -49,7 +49,6 @@ jobs:
       - name: List root directory contents
         run: ls -alh
       
-
       - name: List directory contents
         run: ls -alh env/${{ github.event.inputs.environment }}
 
