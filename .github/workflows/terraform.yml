@@ -40,6 +40,7 @@ jobs:
             echo "environment=dev" >> $GITHUB_OUTPUT
           fi
 
+          
       - name: Debug environment selection
         run: |
           echo "Event name: ${{ github.event_name }}"
