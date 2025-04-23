@@ -27,18 +27,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Determine environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
       - name: Debug environment selection
         run: |
           echo "Event name: ${{ github.event_name }}"
           echo "Branch: ${{ github.ref }}"
           echo "Input environment: ${{ github.event.inputs.environment }}"
-          echo "Working directory will be: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}"
+          echo "Selected environment: ${{ steps.set-env.outputs.environment }}"
+          echo "Working directory will be: ./env/${{ steps.set-env.outputs.environment }}"
 
       - name: Debug working directory
         run: |
           pwd
           ls -la
-        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+        working-directory: ./env/${{ steps.set-env.outputs.environment }}
 
       - name: Azure Login
         uses: azure/login@v1
@@ -52,21 +66,21 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
-        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+        working-directory: ./env/${{ steps.set-env.outputs.environment }}
 
       - name: Terraform Format Check
         run: terraform fmt -check
-        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+        working-directory: ./env/${{ steps.set-env.outputs.environment }}
 
       - name: Terraform Validate
         run: terraform validate
-        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+        working-directory: ./env/${{ steps.set-env.outputs.environment }}
 
       - name: Terraform Plan
         run: terraform plan
-        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+        working-directory: ./env/${{ steps.set-env.outputs.environment }}
 
       - name: Terraform Apply
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: terraform apply -auto-approve
-        working-directory: ./env/${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+        working-directory: ./env/${{ steps.set-env.outputs.environment }}
