@@ -46,6 +46,9 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: List directory contents
+        run: ls -alh env/${{ github.event.inputs.environment }}
+
       - name: Terraform Plan
         run: terraform plan
 
