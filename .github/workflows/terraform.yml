@@ -6,6 +6,11 @@ on:
       - main
       - dev
       - staging
+  pull request:
+    branches:
+      - main
+      - dev
+      - staging
   workflow_dispatch:
     inputs:
       environment:
@@ -21,7 +26,7 @@ jobs:
     defaults:
       run:
         # Đảm bảo đường dẫn thư mục làm việc là đúng
-        working-directory: ../env/dev
+        working-directory: /env/${{ github.event.inputs.environment }}
 
     steps:
       - name: Checkout repository
