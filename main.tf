@@ -25,7 +25,8 @@ resource "aws_lambda_function" "main" {
 
   environment {
     variables = {
-      ENVIRONMENT = "dev"
+      ENVIRONMENT  = "dev"
+      PROJECT_NAME = var.project_name
     }
   }
 
