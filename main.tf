@@ -1,12 +1,4 @@
 # ─────────────────────────────────────────────
-# CloudWatch Log Group
-# ─────────────────────────────────────────────
-resource "aws_cloudwatch_log_group" "lambda" {
-  name              = "/aws/lambda/${var.project_name}-function"
-  retention_in_days = 14
-}
-
-# ─────────────────────────────────────────────
 # Lambda Function
 # ─────────────────────────────────────────────
 data "archive_file" "lambda_zip" {
@@ -37,9 +29,6 @@ resource "aws_lambda_function" "main" {
     }
   }
 
-  depends_on = [
-    aws_cloudwatch_log_group.lambda,
-  ]
 }
 
 # ─────────────────────────────────────────────
