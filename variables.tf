@@ -7,5 +7,5 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name used as prefix for all resources"
   type        = string
-  default     = "vule-serverless"
+  default     = "vule"
 }
