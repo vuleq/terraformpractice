@@ -40,7 +40,8 @@ resource "aws_lambda_function" "this" {
     ignore_changes = [
       last_modified,
       source_code_hash,  # CICD will handle code updates separately
-      s3_key,  # Uncomment if CICD also manages S3 key paths
+      s3_key,            # CICD manages S3 key paths
+      layers,            # CICD pipeline manages layer assignments after creation
     ]
   }
 }
