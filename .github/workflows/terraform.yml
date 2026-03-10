@@ -157,16 +157,17 @@ jobs:
             ${{ env.WORKING_DIR }}/plan-output.txt
           retention-days: 1
 
-      - name: Show plan summary
+      - name: Post plan to Job Summary
         if: steps.plan.outputs.has-changes == 'true'
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          echo "======================================"
-          echo "📋 TERRAFORM PLAN SUMMARY"
-          echo "======================================"
-          cat plan-output.txt
-          echo "======================================"
-          echo "⏳ Waiting for manual approval to apply..."
+          echo "## 📋 Terraform Plan - Changes to Apply" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E "^\s*(#|\+|-|~|Plan:|Changes to)" plan-output.txt | head -50 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⏳ **Review the changes above then approve the deployment**" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================
   # JOB 2: MANUAL APPROVAL
@@ -181,8 +182,10 @@ jobs:
     environment: production
 
     steps:
-      - name: Approved
-        run: echo "✅ Approved! Proceeding with terraform apply..."
+      - name: Show plan reminder
+        run: |
+          echo "✅ Approved! Check the Job Summary of the Terraform Plan job to review changes."
+          echo "Proceeding with terraform apply..."
 
   # ============================================================
   # JOB 3: TERRAFORM APPLY
