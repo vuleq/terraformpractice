@@ -15,9 +15,61 @@ env:
 
 jobs:
   # ============================================================
+  # JOB 0: BOOTSTRAP - Tạo S3 bucket cho Terraform backend
+  # Chỉ chạy 1 lần, nếu bucket đã tồn tại thì bỏ qua
+  # ============================================================
+  bootstrap:
+    name: Bootstrap (S3 backend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Check if S3 bucket exists
+        id: check-bucket
+        run: |
+          BUCKET="vule-s3-store-tfstates"
+          if aws s3api head-bucket --bucket $BUCKET 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ S3 bucket already exists, skipping bootstrap"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "📦 S3 bucket not found, will create via bootstrap"
+          fi
+
+      - name: Terraform Init (bootstrap)
+        if: steps.check-bucket.outputs.exists == 'false'
+        working-directory: bootstrap
+        run: terraform init
+
+      - name: Terraform Apply (bootstrap)
+        if: steps.check-bucket.outputs.exists == 'false'
+        working-directory: bootstrap
+        run: |
+          terraform apply -auto-approve \
+            -var="region=${{ env.AWS_REGION }}" \
+            -var="bucket_name=vule-s3-store-tfstates" \
+            -var="aws_profile="
+          echo "✅ S3 bucket created successfully!"
+
+  # ============================================================
   # JOB 1: TERRAFORM PLAN
   # ============================================================
   terraform-plan:
+    needs: bootstrap
     name: Terraform Plan
     runs-on: ubuntu-latest
     outputs:
