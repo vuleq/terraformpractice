@@ -4,6 +4,7 @@ terraform {
     bucket           = "vule-s3-store-tfstates"
     profile          = "vuletest"
     key            = "terraform.tfstate"
+    
         
 
   }
