@@ -20,7 +20,7 @@ vpc_config = null
 #LAMBDA FUNCTIONS
 lambda_definitions = {
   lambda_1 = {
-    function_name = "prod-wdr-maritimeapps-deploy-ld-job-get-all-supervisors"
+    function_name = "vule-job-get-all-supervisors"
     runtime       = "nodejs22.x"
     handler       = "index.handler"
     timeout       = 60
@@ -34,14 +34,14 @@ lambda_definitions = {
     layers = ["connect_db_v35", "models_v35","common_utils", "error_codes_v35", "AWS-Parameters-and-Secrets-Lambda-Extension"]
   },
   lambda_2 = {
-    function_name = "prod-wdr-maritimeapps-deploy-ld-job-get-all-trade-sections"
+    function_name = "vule-job-get-all-trade-sections"
     runtime       = "nodejs22.x"
     handler       = "index.handler"
     timeout       = 60
     memory_size   = 128
     env_vars = {
       STAGE = "prod"
-      BUCKET_NAME = "prod-wdr-maritimeapps-deploy-stores-lambdasources"
+      # BUCKET_NAME = "prod-wdr-maritimeapps-deploy-stores-lambdasources"
       
     }
     # s3_bucket = "prod-wdr-maritimeapps-deploy-store-lambdasources"
