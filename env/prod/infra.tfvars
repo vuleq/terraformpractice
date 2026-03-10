@@ -3301,13 +3301,10 @@ lambda_definitions = {
 # #SQS_S3 and DB
 s3_buckets = {
   bucket1 = {
-    name = "prod-wdr-maritimeapps-deploy-lambda-assets6"
-  }
-  bucket2 = {
-    name = "prod-wdr-maritimeapps-deploy-lambda-cloudfront-logs6"
+    name = "vule-assets-bucket"
   }
   bucket3 = {
-    name = "prod-wdr-maritimeapps-deploy-lambda-fe-source6"
+    name = "vule-fe-source-bucket"
   }
 }
 
@@ -3370,7 +3367,7 @@ cognito_proxy_distribution = {
 
 # Enable Origin Access Control for FE S3 buckets
 enable_oac_for_fe = true  # ENABLED - OAC imported from manual setup
-fe_bucket_domain_name = "prod-wdr-maritimeapps-deploy-lambda-fe-source6.s3.us-east-2.amazonaws.com"
+fe_bucket_domain_name = "vule-fe-source-bucket.s3.us-east-2.amazonaws.com"
 
 rds_clusters = {
 
@@ -5808,21 +5805,21 @@ cors_origins = [
   "http://localhost:8101",
   "http://localhost:*",
   "http://127.0.0.1:*",
-  "https://prod-wdr-maritimeapps-deploy-lambda-fe-source6.s3.us-east-2.amazonaws.com", # ← FE source bucket đã có sẵn
-  "https://prod-wdr-maritimeapps-deploy-lambda-fe-source6.s3.amazonaws.com",                 # ← FE source bucket đã có sẵn   
-  "https://prod-wdr-maritimeapps-deploy-lambda-assets6.s3.us-east-2.amazonaws.com",  # ← Assets bucket đã có sẵn
-  "https://prod-wdr-maritimeapps-deploy-lambda-assets6.s3.amazonaws.com",                 # S3 bucket assets for FE cloudfront    
-  "http://prod-wdr-maritimeapps-deploy-lambda-fe-source6.s3-website-us-east-2.amazonaws.com", # ← FE source bucket đã có sẵn
-  "http://prod-wdr-maritimeapps-deploy-lambda-assets6.s3-website-us-east-2.amazonaws.com" # S3 bucket assets for FE cloudfront
+  "https://vule-fe-source-bucket.s3.us-east-2.amazonaws.com",
+  "https://vule-fe-source-bucket.s3.amazonaws.com",
+  "https://vule-assets-bucket.s3.us-east-2.amazonaws.com",
+  "https://vule-assets-bucket.s3.amazonaws.com",
+  "http://vule-fe-source-bucket.s3-website-us-east-2.amazonaws.com",
+  "http://vule-assets-bucket.s3-website-us-east-2.amazonaws.com"
 ]
 
 csp_config = {
-  s3_bucket_name          = "prod-wdr-maritimeapps-deploy-lambda-fe-source6"  # ← FE source bucket đã có sẵn
+  s3_bucket_name          = "vule-fe-source-bucket"
   s3_region               = "us-east-2"
-  api_cloudfront_domain   = "dmwji128fkqvu.cloudfront.net"  # BE cloudfront domain TMA prod
+  api_cloudfront_domain   = ""
   cognito_region          = "us-east-2"
-  cognito_user_pool_id    = "us-east-28h0zvkqbm"    # Domain in Cognito User Pool ID TMA prod
-  s3_assets_bucket        = "prod-wdr-maritimeapps-deploy-lambda-assets6"  # ← Assets bucket đã có sẵn
+  cognito_user_pool_id    = "us-east-2_placeholder"
+  s3_assets_bucket        = "vule-assets-bucket"
   additional_connect_src  = ""
   additional_img_src      = ""
 }
