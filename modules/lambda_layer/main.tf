@@ -48,32 +48,30 @@ data "aws_region" "current" {}
 data "external" "latest_layer_version" {
   count = var.create_layer ? 1 : 0
   
-  # Dùng PowerShell (có sẵn trên Windows, cần cài PowerShell Core trên Mac/Linux)
-  # Hoặc có thể dùng bash trên Mac/Linux bằng cách thay "powershell" bằng "bash" và sửa command
-  program = ["powershell", "-Command", <<-EOT
-    $ErrorActionPreference = "Stop"
-    try {
-      # Query tất cả layer versions và sort theo version number để lấy latest
-      $result = aws lambda list-layer-versions --layer-name ${var.layer_name} --region ${data.aws_region.current.name} --output json 2>$null
-      if ($result) {
-        $allVersions = $result | ConvertFrom-Json
-        if ($allVersions.LayerVersions -and $allVersions.LayerVersions.Count -gt 0) {
-          # Sort theo Version number (descending) và lấy version cao nhất
-          $latest = $allVersions.LayerVersions | Sort-Object -Property Version -Descending | Select-Object -First 1
-          if ($latest.Version -and $latest.LayerVersionArn) {
-            Write-Output "{`"Version`": `"$($latest.Version)`", `"Arn`": `"$($latest.LayerVersionArn)`"}"
-          } else {
-            Write-Output '{"Version": "null", "Arn": "null"}'
-          }
-        } else {
-          Write-Output '{"Version": "null", "Arn": "null"}'
-        }
-      } else {
-        Write-Output '{"Version": "null", "Arn": "null"}'
-      }
-    } catch {
-      Write-Output '{"Version": "null", "Arn": "null"}'
-    }
+  # Dùng bash (Linux/Mac) - tương thích với GitHub Actions Ubuntu runner
+  program = ["bash", "-c", <<-EOT
+    result=$(aws lambda list-layer-versions \
+      --layer-name "${var.layer_name}" \
+      --region "${data.aws_region.current.name}" \
+      --output json 2>/dev/null) || true
+
+    if [ -z "$result" ]; then
+      echo '{"Version": "null", "Arn": "null"}'
+      exit 0
+    fi
+
+    arn=$(echo "$result" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+versions = data.get('LayerVersions', [])
+if versions:
+    latest = sorted(versions, key=lambda x: x['Version'], reverse=True)[0]
+    print(json.dumps({'Version': str(latest['Version']), 'Arn': latest['LayerVersionArn']}))
+else:
+    print('{\"Version\": \"null\", \"Arn\": \"null\"}')
+" 2>/dev/null) || echo '{"Version": "null", "Arn": "null"}'
+
+    echo "$arn"
   EOT
   ]
 }
