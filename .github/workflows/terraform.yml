@@ -107,6 +107,7 @@ jobs:
           terraform plan \
             -var-file="infra.tfvars" \
             -out=tfplan \
+            -input=false \
             -detailed-exitcode 2>&1 | tee plan-output.txt
           EXIT_CODE=${PIPESTATUS[0]}
           set -e
