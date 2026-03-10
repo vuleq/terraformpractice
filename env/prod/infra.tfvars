@@ -3299,18 +3299,17 @@ lambda_definitions = {
 # 
 #   }
 # #SQS_S3 and DB
-# s3_buckets = {
-#   bucket1 = {
-#     name = "prod-wdr-maritimeapps-deploy-lambda-assets6"
-#   }
-#   bucket2 = {
-#     name = "prod-wdr-maritimeapps-deploy-lambda-cloudfront-logs6"
-#   }
-#   bucket3 = {
-#     name = "prod-wdr-maritimeapps-deploy-lambda-fe-source6"
-#     
-#   }
-# }
+s3_buckets = {
+  bucket1 = {
+    name = "prod-wdr-maritimeapps-deploy-lambda-assets6"
+  }
+  bucket2 = {
+    name = "prod-wdr-maritimeapps-deploy-lambda-cloudfront-logs6"
+  }
+  bucket3 = {
+    name = "prod-wdr-maritimeapps-deploy-lambda-fe-source6"
+  }
+}
 
 # ========================================
 # SQS QUEUES
