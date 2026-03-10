@@ -3311,53 +3311,8 @@ s3_buckets = {
 # ========================================
 # SQS QUEUES
 # ========================================
-sqs_queues = {
-  notification_processing = {
-    name                      = "prod-wdr-notification-processing"
-    delay_seconds             = 0
-    retention_seconds         = 345600  # 4 days
-    visibility_timeout        = 60
-    receive_wait_time         = 0  # Short polling (0 = immediate return, >0 = long polling)
-    lambda_keys               = ["lambda_130"]  
-    batch_size                = 10
-    batching_window           = 0
-    # max_retry_attempts        = 5  # Unlimited retries
-    enabled                   = true
-  },
-  silent_notification_processing = {
-    name                      = "prod-wdr-notification-silent-processing"
-    delay_seconds             = 0
-    retention_seconds         = 345600  # 4 days
-    visibility_timeout        = 60
-    receive_wait_time         = 0  # Short polling (0 = immediate return, >0 = long polling)
-    lambda_keys               = ["lambda_131"]  
-    batch_size                = 10
-    batching_window           = 0
-    # max_retry_attempts        = 5  # Unlimited retries
-    enabled                   = true
-  },
-  project_tasks_dlq = {
-    name                      = "prod-wdr-project-tasks-dlq"
-    delay_seconds             = 0
-    retention_seconds         = 345600  # 4 days
-    visibility_timeout        = 60
-    receive_wait_time         = 0  # Short polling (0 = immediate return, >0 = long polling)
-    # No lambda_keys - DLQ không có lambda trigger
-  },
-  project_tasks = {
-    name                      = "prod-wdr-project-tasks"
-    delay_seconds             = 0
-    retention_seconds         = 1209600   # 14 days
-    visibility_timeout        = 300
-    receive_wait_time         = 20  # Long polling (0 = immediate return, >0 = long polling)
-    lambda_keys               = ["lambda_152"]  
-    batch_size                = 10
-    batching_window           = 0
-    enabled                   = true
-    dlq_key                   = "project_tasks_dlq"  # DLQ là project_tasks_dlq
-    max_receive_count         = 5  # Max receive count trước khi gửi vào DLQ
-  }
-}
+# sqs_queues commented out - chỉ tạo 2 lambda functions để test
+sqs_queues = {}
 
 # Cognito Proxy CloudFront Distribution
 cognito_proxy_distribution = {

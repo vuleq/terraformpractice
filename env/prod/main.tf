@@ -576,300 +576,300 @@ locals {
 
 # S3 notifications đã được chuyển sang file s3_notifications.tf để dễ quản lý
 
-# =============================================================================
-# EventBridge Schedulers Configuration
-# =============================================================================
-
-# Schedule group name - Dùng chung cho tất cả schedulers
-locals {
-  shared_schedule_group_name = "prod-wdr-maritimeapps-schedulers"
-}
-
-# SCHEDULER 1: Project Daily Fetch - 6:00 AM UTC+8 (Singapore time)
-# Scheduler này quản lý schedule group (đã có sẵn trong state)
-module "project_daily_fetch_scheduler" {
-  source = "../../modules/module_eventbridge_scheduler"
-
-  scheduler_name                = "prod-wdr-maritimeapps-project-daily-fetch-scheduler"
-  scheduler_group_name          = local.shared_schedule_group_name
-  create_schedule_group         = true  # Scheduler đầu tiên quản lý schedule group
-  target_lambda_arn            = module.lambda_functions["lambda_79"].arn
-  target_lambda_function_name  = module.lambda_functions["lambda_79"].function_name
-  environment                  = var.environment
-  
-  # Sử dụng existing IAM role (cần update trust policy để include scheduler.amazonaws.com)
-  existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
-  
-  
-  # Schedule: 6:00 AM UTC+8 (Singapore time) = 22:00 UTC
-  schedule_expression = "cron(0 7 * * ? *)"
-  
-  # Input payload cho Lambda function
-  lambda_input = {
-    trigger_source = "daily_scheduler"
-    schedule_time  = "6:00 AM UTC+8"
-    environment    = var.environment
-    task_type     = "project_daily_fetch"
-  }
-  
-  # Cấu hình retry
-  max_retry_attempts = 3
-  max_event_age      = 3600  # 1 hour
-  
-  # Enable/disable scheduler
-  enabled = true
-
-  depends_on = [
-    module.lambda_functions
-  ]
-}
-
-# =============================================================================
-# SCHEDULER 2: Daily Schedule - Report Update Silent Notification (Uncomment and configure as needed)
-# =============================================================================
-
-module "report_update_silent_notification_scheduler" {
-  source = "../../modules/module_eventbridge_scheduler"
-
-  scheduler_name                = "prod-wdr-mapps-report-update-silent-noti-scheduler"
-  scheduler_group_name          = local.shared_schedule_group_name
-  create_schedule_group         = false  # Dùng schedule group có sẵn
-  target_lambda_arn            = module.lambda_functions["lambda_161"].arn  # Thay lambda_XX bằng lambda key thực tế
-  target_lambda_function_name  = module.lambda_functions["lambda_161"].function_name
-  environment                  = var.environment
-  
-  # Sử dụng existing IAM role (cần update trust policy để include scheduler.amazonaws.com)
-  existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
-  
-  # Schedule: Thay đổi theo nhu cầu (ví dụ: 8:00 AM UTC+8 = 0:00 UTC)
-  schedule_expression = "rate(60 minutes)"
-  
-  # Input payload cho Lambda function
-  lambda_input = {
-    trigger_source = "report_update_silent_notification_scheduler"
-    environment    = var.environment
-    task_type     = "report_update_silent_notification"
-  }
-  
-  # Cấu hình retry
-  max_retry_attempts = 3
-  max_event_age      = 3600  # 1 hour
-  
-  # Enable/disable scheduler
-  enabled = true
-
-  depends_on = [
-    module.lambda_functions
-  ]
-}
-
-
-# =============================================================================
-# SCHEDULER 3: Daily Schedule - Lock Dormant Users (Commented out - Uncomment if needed)
-# =============================================================================
-
-module "lock_dormant_users_scheduler" {
-  source = "../../modules/module_eventbridge_scheduler"
-
-  scheduler_name                = "prod-wdr-maritimeapps-lock-dormant-users-scheduler"
-  scheduler_group_name          = local.shared_schedule_group_name
-  create_schedule_group         = false
-  target_lambda_arn            = module.lambda_functions["lambda_162"].arn  # Replace with actual lambda
-  target_lambda_function_name  = module.lambda_functions["lambda_162"].function_name
-  environment                  = var.environment
-  
-  # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
-  existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
-  
-  # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
-  schedule_expression = "cron(0 0 * * ? *)"
-  
-  lambda_input = {
-    trigger_source = "lock_dormant_users_scheduler"
-    environment    = var.environment
-    task_type     = "lock_dormant_users"
-  }
-  
-  max_retry_attempts = 3
-  max_event_age      = 3600
-  enabled = true
-
-  depends_on = [
-    module.lambda_functions
-  ]
-}
-
-# =============================================================================
-# SCHEDULER 4:  Rate Schedule - Lambda Ping Schedule (Commented out - Uncomment if needed)
-# =============================================================================
-
-module "lambda_ping_schedule_scheduler" {
-  source = "../../modules/module_eventbridge_scheduler"
-
-  scheduler_name                = "prod-wdr-maritimeapps-lambda-ping-schedule-scheduler"
-  scheduler_group_name          = local.shared_schedule_group_name
-  create_schedule_group         = false
-  target_lambda_arn            = module.lambda_functions["lambda_163"].arn  # Replace with actual lambda
-  target_lambda_function_name  = module.lambda_functions["lambda_163"].function_name
-  environment                  = var.environment
-  
-  # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
-  existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
-  
-  # Schedule: Every 5 minutes
-  schedule_expression = "rate(5 minutes)"
-  
-  lambda_input = {
-    trigger_source = "lambda_ping_schedule_scheduler"
-    environment    = var.environment
-    task_type     = "lambda-ping-schedule"
-  }
-  
-  max_retry_attempts = 3
-  max_event_age      = 3600
-  enabled = true
-
-  depends_on = [
-    module.lambda_functions
-  ]
-}
-
-# =============================================================================
-# SCHEDULER 5: Daily Schedule - Multi Cognito Auto Sync Schedule (Commented out - Uncomment if needed)
-# =============================================================================
-
-module "multi_cognito_auto_sync_schedule_scheduler" {
-  source = "../../modules/module_eventbridge_scheduler"
-
-  scheduler_name                = "prod-wdr-maritimeapps-multi-cognito-auto-sync-schedule"
-  scheduler_group_name          = local.shared_schedule_group_name
-  create_schedule_group         = false
-  target_lambda_arn            = module.lambda_functions["lambda_175"].arn  # Replace with actual lambda
-  target_lambda_function_name  = module.lambda_functions["lambda_175"].function_name
-  environment                  = var.environment
-  
-  # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
-  existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
-  
-  # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
-  schedule_expression = "cron(0 0 * * ? *)"
-  
-  lambda_input = {
-    trigger_source = "multi_cognito_auto_sync_schedule_scheduler"
-    environment    = var.environment
-    task_type     = "multi-cognito-auto-sync"
-  }
-  
-  max_retry_attempts = 3
-  max_event_age      = 3600
-  enabled = true
-
-  depends_on = [
-    module.lambda_functions
-  ]
-}
-
-# =============================================================================
-# SCHEDULER 6: Daily Schedule - Cleanup-old-records
-# =============================================================================
-
-module "cleanup_old_records_scheduler" {
-  source = "../../modules/module_eventbridge_scheduler"
-
-  scheduler_name                = "prod-wdr-maritimeapps-cleanup-old-records-schedule"
-  scheduler_group_name          = local.shared_schedule_group_name
-  create_schedule_group         = false
-  target_lambda_arn            = module.lambda_functions["lambda_193"].arn  # Replace with actual lambda
-  target_lambda_function_name  = module.lambda_functions["lambda_193"].function_name
-  environment                  = var.environment
-  
-  # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
-  existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
-  
-  # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
-  schedule_expression = "cron(0 0 * * ? *)"
-  
-  lambda_input = {
-    trigger_source = "cleanup_old_records_scheduler"
-    environment    = var.environment
-    task_type     = "cleanup-old-records"
-  }
-  
-  max_retry_attempts = 3
-  max_event_age      = 3600
-  enabled = true
-
-  depends_on = [
-    module.lambda_functions
-  ]
-}
-
-# =============================================================================
-# SCHEDULER 7: Daily Schedule - Silent Notification Schedule
-# =============================================================================
-
-module "silent_notification_schedule_scheduler" {
-  source = "../../modules/module_eventbridge_scheduler"
-
-  scheduler_name                = "prod-wdr-maritimeapps-changes-silent-noti-schedule"
-  scheduler_group_name          = local.shared_schedule_group_name
-  create_schedule_group         = false
-  target_lambda_arn            = module.lambda_functions["lambda_172"].arn  # Replace with actual lambda
-  target_lambda_function_name  = module.lambda_functions["lambda_172"].function_name
-  environment                  = var.environment
-  
-  # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
-  existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
-  
-  # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
-  schedule_expression = "cron(0 0 * * ? *)"
-  
-  lambda_input = {
-    trigger_source = "changes_update_silent_notification_scheduler"
-    environment    = var.environment
-    task_type     = "changes_update_silent_notification"
-  }
-  
-  max_retry_attempts = 3
-  max_event_age      = 3600
-  enabled = true
-
-  depends_on = [
-    module.lambda_functions
-  ]
-}
-
-# =============================================================================
-# SCHEDULER 8: Daily Schedule - Summarize Usage Analytics
-# =============================================================================
-
-module "summarize_usage_analytics_scheduler" {
-  source = "../../modules/module_eventbridge_scheduler"
-
-  scheduler_name                = "prod-wdr-maritimeapps-summarize-usage-analytics-schedule"
-  scheduler_group_name          = local.shared_schedule_group_name
-  create_schedule_group         = false
-  target_lambda_arn            = module.lambda_functions["lambda_199"].arn  # Replace with actual lambda
-  target_lambda_function_name  = module.lambda_functions["lambda_199"].function_name
-  environment                  = var.environment
-  
-  # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
-  existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
-  
-  # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
-  schedule_expression = "cron(0 0 * * ? *)"
-  
-  lambda_input = {
-    trigger_source = "summarize_usage_analytics_scheduler"
-    environment    = var.environment
-    task_type     = "summarize_usage_analytics"
-  }
-  
-  max_retry_attempts = 3
-  max_event_age      = 3600
-  enabled = true
-
-  depends_on = [
-    module.lambda_functions
-  ]
-}
+# # =============================================================================
+# # EventBridge Schedulers Configuration
+# # =============================================================================
+# 
+# # Schedule group name - Dùng chung cho tất cả schedulers
+# locals {
+#   shared_schedule_group_name = "prod-wdr-maritimeapps-schedulers"
+# }
+# 
+# # SCHEDULER 1: Project Daily Fetch - 6:00 AM UTC+8 (Singapore time)
+# # Scheduler này quản lý schedule group (đã có sẵn trong state)
+# module "project_daily_fetch_scheduler" {
+#   source = "../../modules/module_eventbridge_scheduler"
+# 
+#   scheduler_name                = "prod-wdr-maritimeapps-project-daily-fetch-scheduler"
+#   scheduler_group_name          = local.shared_schedule_group_name
+#   create_schedule_group         = true  # Scheduler đầu tiên quản lý schedule group
+#   target_lambda_arn            = module.lambda_functions["lambda_79"].arn
+#   target_lambda_function_name  = module.lambda_functions["lambda_79"].function_name
+#   environment                  = var.environment
+#   
+#   # Sử dụng existing IAM role (cần update trust policy để include scheduler.amazonaws.com)
+#   existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
+#   
+#   
+#   # Schedule: 6:00 AM UTC+8 (Singapore time) = 22:00 UTC
+#   schedule_expression = "cron(0 7 * * ? *)"
+#   
+#   # Input payload cho Lambda function
+#   lambda_input = {
+#     trigger_source = "daily_scheduler"
+#     schedule_time  = "6:00 AM UTC+8"
+#     environment    = var.environment
+#     task_type     = "project_daily_fetch"
+#   }
+#   
+#   # Cấu hình retry
+#   max_retry_attempts = 3
+#   max_event_age      = 3600  # 1 hour
+#   
+#   # Enable/disable scheduler
+#   enabled = true
+# 
+#   depends_on = [
+#     module.lambda_functions
+#   ]
+# }
+# 
+# # =============================================================================
+# # SCHEDULER 2: Daily Schedule - Report Update Silent Notification (Uncomment and configure as needed)
+# # =============================================================================
+# 
+# module "report_update_silent_notification_scheduler" {
+#   source = "../../modules/module_eventbridge_scheduler"
+# 
+#   scheduler_name                = "prod-wdr-mapps-report-update-silent-noti-scheduler"
+#   scheduler_group_name          = local.shared_schedule_group_name
+#   create_schedule_group         = false  # Dùng schedule group có sẵn
+#   target_lambda_arn            = module.lambda_functions["lambda_161"].arn  # Thay lambda_XX bằng lambda key thực tế
+#   target_lambda_function_name  = module.lambda_functions["lambda_161"].function_name
+#   environment                  = var.environment
+#   
+#   # Sử dụng existing IAM role (cần update trust policy để include scheduler.amazonaws.com)
+#   existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
+#   
+#   # Schedule: Thay đổi theo nhu cầu (ví dụ: 8:00 AM UTC+8 = 0:00 UTC)
+#   schedule_expression = "rate(60 minutes)"
+#   
+#   # Input payload cho Lambda function
+#   lambda_input = {
+#     trigger_source = "report_update_silent_notification_scheduler"
+#     environment    = var.environment
+#     task_type     = "report_update_silent_notification"
+#   }
+#   
+#   # Cấu hình retry
+#   max_retry_attempts = 3
+#   max_event_age      = 3600  # 1 hour
+#   
+#   # Enable/disable scheduler
+#   enabled = true
+# 
+#   depends_on = [
+#     module.lambda_functions
+#   ]
+# }
+# 
+# 
+# # =============================================================================
+# # SCHEDULER 3: Daily Schedule - Lock Dormant Users (Commented out - Uncomment if needed)
+# # =============================================================================
+# 
+# module "lock_dormant_users_scheduler" {
+#   source = "../../modules/module_eventbridge_scheduler"
+# 
+#   scheduler_name                = "prod-wdr-maritimeapps-lock-dormant-users-scheduler"
+#   scheduler_group_name          = local.shared_schedule_group_name
+#   create_schedule_group         = false
+#   target_lambda_arn            = module.lambda_functions["lambda_162"].arn  # Replace with actual lambda
+#   target_lambda_function_name  = module.lambda_functions["lambda_162"].function_name
+#   environment                  = var.environment
+#   
+#   # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
+#   existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
+#   
+#   # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
+#   schedule_expression = "cron(0 0 * * ? *)"
+#   
+#   lambda_input = {
+#     trigger_source = "lock_dormant_users_scheduler"
+#     environment    = var.environment
+#     task_type     = "lock_dormant_users"
+#   }
+#   
+#   max_retry_attempts = 3
+#   max_event_age      = 3600
+#   enabled = true
+# 
+#   depends_on = [
+#     module.lambda_functions
+#   ]
+# }
+# 
+# # =============================================================================
+# # SCHEDULER 4:  Rate Schedule - Lambda Ping Schedule (Commented out - Uncomment if needed)
+# # =============================================================================
+# 
+# module "lambda_ping_schedule_scheduler" {
+#   source = "../../modules/module_eventbridge_scheduler"
+# 
+#   scheduler_name                = "prod-wdr-maritimeapps-lambda-ping-schedule-scheduler"
+#   scheduler_group_name          = local.shared_schedule_group_name
+#   create_schedule_group         = false
+#   target_lambda_arn            = module.lambda_functions["lambda_163"].arn  # Replace with actual lambda
+#   target_lambda_function_name  = module.lambda_functions["lambda_163"].function_name
+#   environment                  = var.environment
+#   
+#   # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
+#   existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
+#   
+#   # Schedule: Every 5 minutes
+#   schedule_expression = "rate(5 minutes)"
+#   
+#   lambda_input = {
+#     trigger_source = "lambda_ping_schedule_scheduler"
+#     environment    = var.environment
+#     task_type     = "lambda-ping-schedule"
+#   }
+#   
+#   max_retry_attempts = 3
+#   max_event_age      = 3600
+#   enabled = true
+# 
+#   depends_on = [
+#     module.lambda_functions
+#   ]
+# }
+# 
+# # =============================================================================
+# # SCHEDULER 5: Daily Schedule - Multi Cognito Auto Sync Schedule (Commented out - Uncomment if needed)
+# # =============================================================================
+# 
+# module "multi_cognito_auto_sync_schedule_scheduler" {
+#   source = "../../modules/module_eventbridge_scheduler"
+# 
+#   scheduler_name                = "prod-wdr-maritimeapps-multi-cognito-auto-sync-schedule"
+#   scheduler_group_name          = local.shared_schedule_group_name
+#   create_schedule_group         = false
+#   target_lambda_arn            = module.lambda_functions["lambda_175"].arn  # Replace with actual lambda
+#   target_lambda_function_name  = module.lambda_functions["lambda_175"].function_name
+#   environment                  = var.environment
+#   
+#   # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
+#   existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
+#   
+#   # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
+#   schedule_expression = "cron(0 0 * * ? *)"
+#   
+#   lambda_input = {
+#     trigger_source = "multi_cognito_auto_sync_schedule_scheduler"
+#     environment    = var.environment
+#     task_type     = "multi-cognito-auto-sync"
+#   }
+#   
+#   max_retry_attempts = 3
+#   max_event_age      = 3600
+#   enabled = true
+# 
+#   depends_on = [
+#     module.lambda_functions
+#   ]
+# }
+# 
+# # =============================================================================
+# # SCHEDULER 6: Daily Schedule - Cleanup-old-records
+# # =============================================================================
+# 
+# module "cleanup_old_records_scheduler" {
+#   source = "../../modules/module_eventbridge_scheduler"
+# 
+#   scheduler_name                = "prod-wdr-maritimeapps-cleanup-old-records-schedule"
+#   scheduler_group_name          = local.shared_schedule_group_name
+#   create_schedule_group         = false
+#   target_lambda_arn            = module.lambda_functions["lambda_193"].arn  # Replace with actual lambda
+#   target_lambda_function_name  = module.lambda_functions["lambda_193"].function_name
+#   environment                  = var.environment
+#   
+#   # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
+#   existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
+#   
+#   # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
+#   schedule_expression = "cron(0 0 * * ? *)"
+#   
+#   lambda_input = {
+#     trigger_source = "cleanup_old_records_scheduler"
+#     environment    = var.environment
+#     task_type     = "cleanup-old-records"
+#   }
+#   
+#   max_retry_attempts = 3
+#   max_event_age      = 3600
+#   enabled = true
+# 
+#   depends_on = [
+#     module.lambda_functions
+#   ]
+# }
+# 
+# # =============================================================================
+# # SCHEDULER 7: Daily Schedule - Silent Notification Schedule
+# # =============================================================================
+# 
+# module "silent_notification_schedule_scheduler" {
+#   source = "../../modules/module_eventbridge_scheduler"
+# 
+#   scheduler_name                = "prod-wdr-maritimeapps-changes-silent-noti-schedule"
+#   scheduler_group_name          = local.shared_schedule_group_name
+#   create_schedule_group         = false
+#   target_lambda_arn            = module.lambda_functions["lambda_172"].arn  # Replace with actual lambda
+#   target_lambda_function_name  = module.lambda_functions["lambda_172"].function_name
+#   environment                  = var.environment
+#   
+#   # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
+#   existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
+#   
+#   # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
+#   schedule_expression = "cron(0 0 * * ? *)"
+#   
+#   lambda_input = {
+#     trigger_source = "changes_update_silent_notification_scheduler"
+#     environment    = var.environment
+#     task_type     = "changes_update_silent_notification"
+#   }
+#   
+#   max_retry_attempts = 3
+#   max_event_age      = 3600
+#   enabled = true
+# 
+#   depends_on = [
+#     module.lambda_functions
+#   ]
+# }
+# 
+# # =============================================================================
+# # SCHEDULER 8: Daily Schedule - Summarize Usage Analytics
+# # =============================================================================
+# 
+# module "summarize_usage_analytics_scheduler" {
+#   source = "../../modules/module_eventbridge_scheduler"
+# 
+#   scheduler_name                = "prod-wdr-maritimeapps-summarize-usage-analytics-schedule"
+#   scheduler_group_name          = local.shared_schedule_group_name
+#   create_schedule_group         = false
+#   target_lambda_arn            = module.lambda_functions["lambda_199"].arn  # Replace with actual lambda
+#   target_lambda_function_name  = module.lambda_functions["lambda_199"].function_name
+#   environment                  = var.environment
+#   
+#   # Sử dụng existing IAM role thay vì tạo mới (đã có đầy đủ permissions)
+#   existing_role_arn            = "arn:aws:iam::797233058645:role/prod_wdr_maritimeapps_deploy_app_lambda"
+#   
+#   # Schedule: Every Monday at 8:00 AM UTC+8 = 0:00 AM UTC
+#   schedule_expression = "cron(0 0 * * ? *)"
+#   
+#   lambda_input = {
+#     trigger_source = "summarize_usage_analytics_scheduler"
+#     environment    = var.environment
+#     task_type     = "summarize_usage_analytics"
+#   }
+#   
+#   max_retry_attempts = 3
+#   max_event_age      = 3600
+#   enabled = true
+# 
+#   depends_on = [
+#     module.lambda_functions
+#   ]
+# }
