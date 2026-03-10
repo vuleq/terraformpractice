@@ -270,7 +270,7 @@ module "lambda_functions" {
   
   {})  
   # Sử dụng layer tùy chọn dựa trên tên layer được chỉ định
-  layers = [for layer_name in each.value.layers : local.available_layers[layer_name] if contains(keys(local.available_layers), layer_name)]
+  layers = [for layer_name in each.value.layers : local.available_layers[layer_name] if contains(keys(local.available_layers), layer_name) && local.available_layers[layer_name] != null]
   # vpc_config = null
   vpc_config = var.vpc_config
   

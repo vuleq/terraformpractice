@@ -59,5 +59,5 @@ variable "layer_version" {
 variable "create_layer" {
   description = "If false, Terraform will not create new layer version. Only use data source to get latest version. Use this when layer already exists and you only want CICD to update code."
   type        = bool
-  default     = true
+  default     = false
 } 
