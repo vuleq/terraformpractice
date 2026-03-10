@@ -255,20 +255,14 @@ module "lambda_functions" {
   
 
   environment = merge({
-    DB_SECRET_ARN = "arn:aws:secretsmanager:us-east-2:797233058645:secret:prod-wdr-maritimeapps-secretmanager-tmaprod-93zYv3"
-    DB_HOST     = module.core_resources.rds_cluster_endpoint["wdr"] 
-    SQS_QUEUE_URL = try(module.core_resources.sqs_queue_urls["notification_processing"], "")
-    SQS_SILENT_URL = try(module.core_resources.sqs_queue_urls["silent_notification_processing"], "")
-    PROJECT_TASKS_QUEUE_URL = try(module.core_resources.sqs_queue_urls["project_tasks"], "")
-    LOG_LEVEL = "ERROR"
-    JWT_SECRET = "wdr-default-secret-key"
-  }, each.value.env_vars,
-  # WebSocket API Gateway endpoint (https://) - chỉ set cho lambda_130 nếu chưa có trong env_vars
-  each.key == "lambda_130" && !contains(keys(each.value.env_vars), "WEBSOCKET_ENDPOINT") ? {
-    WEBSOCKET_ENDPOINT = try(module.websocket_api_gw["websocket_api_1"].websocket_connections_base_url, "")
-  } : {},
-  
-  {})  
+    DB_SECRET_ARN           = "arn:aws:secretsmanager:us-east-2:797233058645:secret:prod-wdr-maritimeapps-secretmanager-tmaprod-93zYv3"
+    DB_HOST                 = ""
+    SQS_QUEUE_URL           = ""
+    SQS_SILENT_URL          = ""
+    PROJECT_TASKS_QUEUE_URL = ""
+    LOG_LEVEL               = "ERROR"
+    JWT_SECRET              = "wdr-default-secret-key"
+  }, each.value.env_vars, {})
   # Sử dụng layer tùy chọn dựa trên tên layer được chỉ định
   layers = [for layer_name in each.value.layers : local.available_layers[layer_name] if contains(keys(local.available_layers), layer_name) && local.available_layers[layer_name] != null]
   # vpc_config = null
@@ -361,89 +355,89 @@ module "websocket_api_gw" {
 
 }
 
-locals {
-  cloudfront_distributions = merge(
-    {
-      fe_site = {
-        origin_domain_name = var.fe_bucket_domain_name
-        origin_type        = "s3"
-        name               = "Prod WDR Frontend Distribution"
-        # S3 Assets bucket domain cho /s3assets/* path pattern
-        s3_assets_bucket_domain = "${var.s3_buckets.bucket1.name}.s3.us-east-2.amazonaws.com"
-        # Lambda@Edge functions được associate tự động trong cloudfront.tf dựa trên pattern matching
-        # Không cần khai báo ở đây vì cloudfront.tf sẽ tự tìm function có key chứa "FE"
-      }
-    },
-    {
-      for k, v in module.rest_api_gw :
-      "be_site_${k}" => {
-        origin_domain_name = v.api_domain_name
-        origin_path        = v.api_origin_path
-        origin_type        = "api_gateway"
-        name               = "WDR Backend API Distribution - ${k}"
-        # Lambda@Edge functions được associate tự động trong cloudfront.tf dựa trên pattern matching
-        # Không cần khai báo ở đây vì cloudfront.tf sẽ tự tìm function có key chứa "BE"
-      }
-    }
-  )
-}
-
-
-module "cloudfront" {
-  source = "../../modules/module_cloudfront"
-  cloudfront_distributions = local.cloudfront_distributions
-  enable_cognito_proxy = var.cognito_proxy_distribution.enabled
-  enable_oac_for_fe = var.enable_oac_for_fe
-  enable_lambda_edge = false  # Enable Lambda@Edge functions creation
-  
-  # Lambda@Edge function names - CẦN THIẾT để tạo Lambda@Edge functions trong us-east-1
-  lambda_edge_function_names = {
-    "prod-wdr-lambda-edge-FE-new" = {
-      runtime     = "nodejs22.x"
-      timeout     = 5
-      memory_size = 128
-    }
-    "prod-wdr-lambda-edge-BE-new" = {
-      runtime     = "nodejs22.x"
-      timeout     = 5
-      memory_size = 128
-    }
-  }
-  
-  # Marker-based replacement variables
-  cors_origins = var.cors_origins
-  csp_config   = var.csp_config
-  
-  # Lambda@Edge IAM Role ARN - Sử dụng role có sẵn
-  lambda_edge_role_arn = var.lambda_edge_role_arn
-  
-  # Tags
-  owner       = var.owner
-  application = var.application
-  environment = var.environment
-  
-  # Providers cho Lambda@Edge (phải deploy ở us-east-1)
-  # Cần uncomment để Terraform có thể quản lý resources đã tồn tại trong state
-  # Ngay cả khi enable_lambda_edge = false, vẫn cần provider để destroy resources cũ
-  providers = {
-    aws.us_east_1 = aws.us_east_1
-  }
-}
-
-module "core_resources" {
-  source        = "../../modules/module_sqs_s3_db"
-  region        = var.region
-  environment   = var.environment
-  s3_buckets    = var.s3_buckets
-  rds_instances = var.rds_instances
-  rds_clusters  = var.rds_clusters
-  lambda_zips   = var.lambda_zips
-  lambda_functions = local.lambda_functions_map
-  sqs_queues    = var.sqs_queues
-  db_subnet_group_name = var.db_subnet_group_name
-  db_cluster_parameter_group_name = var.db_cluster_parameter_group_name
-  # cloudfront_oai_id = module.cloudfront.origin_access_identity_ids["fe_site"]  # Comment lại tạm thời để tránh lỗi permission
-}
+# locals {
+#   cloudfront_distributions = merge(
+#     {
+#       fe_site = {
+#         origin_domain_name = var.fe_bucket_domain_name
+#         origin_type        = "s3"
+#         name               = "Prod WDR Frontend Distribution"
+#         # S3 Assets bucket domain cho /s3assets/* path pattern
+#         s3_assets_bucket_domain = "${var.s3_buckets.bucket1.name}.s3.us-east-2.amazonaws.com"
+#         # Lambda@Edge functions được associate tự động trong cloudfront.tf dựa trên pattern matching
+#         # Không cần khai báo ở đây vì cloudfront.tf sẽ tự tìm function có key chứa "FE"
+#       }
+#     },
+#     {
+#       for k, v in module.rest_api_gw :
+#       "be_site_${k}" => {
+#         origin_domain_name = v.api_domain_name
+#         origin_path        = v.api_origin_path
+#         origin_type        = "api_gateway"
+#         name               = "WDR Backend API Distribution - ${k}"
+#         # Lambda@Edge functions được associate tự động trong cloudfront.tf dựa trên pattern matching
+#         # Không cần khai báo ở đây vì cloudfront.tf sẽ tự tìm function có key chứa "BE"
+#       }
+#     }
+#   )
+# }
+# 
+# 
+# module "cloudfront" {
+#   source = "../../modules/module_cloudfront"
+#   cloudfront_distributions = local.cloudfront_distributions
+#   enable_cognito_proxy = var.cognito_proxy_distribution.enabled
+#   enable_oac_for_fe = var.enable_oac_for_fe
+#   enable_lambda_edge = false  # Enable Lambda@Edge functions creation
+#   
+#   # Lambda@Edge function names - CẦN THIẾT để tạo Lambda@Edge functions trong us-east-1
+#   lambda_edge_function_names = {
+#     "prod-wdr-lambda-edge-FE-new" = {
+#       runtime     = "nodejs22.x"
+#       timeout     = 5
+#       memory_size = 128
+#     }
+#     "prod-wdr-lambda-edge-BE-new" = {
+#       runtime     = "nodejs22.x"
+#       timeout     = 5
+#       memory_size = 128
+#     }
+#   }
+#   
+#   # Marker-based replacement variables
+#   cors_origins = var.cors_origins
+#   csp_config   = var.csp_config
+#   
+#   # Lambda@Edge IAM Role ARN - Sử dụng role có sẵn
+#   lambda_edge_role_arn = var.lambda_edge_role_arn
+#   
+#   # Tags
+#   owner       = var.owner
+#   application = var.application
+#   environment = var.environment
+#   
+#   # Providers cho Lambda@Edge (phải deploy ở us-east-1)
+#   # Cần uncomment để Terraform có thể quản lý resources đã tồn tại trong state
+#   # Ngay cả khi enable_lambda_edge = false, vẫn cần provider để destroy resources cũ
+#   providers = {
+#     aws.us_east_1 = aws.us_east_1
+#   }
+# }
+# 
+# module "core_resources" {
+#   source        = "../../modules/module_sqs_s3_db"
+#   region        = var.region
+#   environment   = var.environment
+#   s3_buckets    = var.s3_buckets
+#   rds_instances = var.rds_instances
+#   rds_clusters  = var.rds_clusters
+#   lambda_zips   = var.lambda_zips
+#   lambda_functions = local.lambda_functions_map
+#   sqs_queues    = var.sqs_queues
+#   db_subnet_group_name = var.db_subnet_group_name
+#   db_cluster_parameter_group_name = var.db_cluster_parameter_group_name
+#   # cloudfront_oai_id = module.cloudfront.origin_access_identity_ids["fe_site"]  # Comment lại tạm thời để tránh lỗi permission
+# }
 
 # Local để tạo lambda ARN mapping cho state machines
 # Map từ lambda_key (lambda_185) hoặc function_name sang ARN

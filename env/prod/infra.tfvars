@@ -9,8 +9,8 @@ account_id   = "797233058645" #change account id of customer
 # DUMMY LAMBDA CODE (for infra-only Lambda creation)
 # ========================================
 # Upload to S3: aws s3 cp lambda-placeholder.zip s3://prod-wdr-maritimeapps-deploy-store-lambdasources/dummy/lambda-placeholder.zip
-dummy_lambda_code_bucket = null
-dummy_lambda_code_key    = null
+dummy_lambda_code_bucket = "vule-s3-store-tfstates"
+dummy_lambda_code_key    = "dummy/lambda-placeholder.zip"
 
 
 

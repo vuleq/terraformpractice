@@ -66,6 +66,16 @@ jobs:
             -var="aws_profile="
           echo "✅ S3 bucket created successfully!"
 
+      - name: Upload dummy Lambda placeholder to S3
+        run: |
+          mkdir -p /tmp/dummy
+          echo 'exports.handler = async () => ({ statusCode: 200, body: "placeholder" });' \
+            > /tmp/dummy/index.js
+          cd /tmp/dummy && zip lambda-placeholder.zip index.js
+          aws s3 cp lambda-placeholder.zip \
+            s3://vule-s3-store-tfstates/dummy/lambda-placeholder.zip
+          echo "✅ Dummy Lambda zip uploaded"
+
   # ============================================================
   # JOB 1: TERRAFORM PLAN
   # ============================================================
