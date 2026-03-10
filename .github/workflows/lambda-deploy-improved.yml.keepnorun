@@ -1,0 +1,253 @@
+name: Lambda Deploy with Improved Detection
+
+on:
+#   push:
+#     branches: [ 'vule/tma/prod-*' ]
+#     paths:
+#       - 'TMA_PROD/devops/**'
+  # Pull Request trigger đã tắt - chỉ chạy khi push code
+  # pull_request:
+  #   branches: [ main, 'vule/tma/prod-2.0.*', 'tma/prod-2.0.*', 'vule/tma/uat-2.0.*' ]
+  #   paths:
+  #     - 'TMA_PROD/devops/**'
+  
+  # Manual trigger đã tắt - chỉ chạy khi push code
+  # workflow_dispatch:
+  #   inputs:
+  #     environment:
+  #       description: 'Deployment Environment'
+  #       required: true
+  #       default: 'prod'
+  #       type: choice
+  #       options:
+  #       - prod
+  #     force_deploy:
+  #       description: 'Force deploy all functions and layers'
+  #       required: false
+  #       default: false
+  #       type: boolean
+  #     deploy_functions:
+  #       description: 'Deploy specific functions (comma-separated)'
+  #       required: false
+  #       type: string
+  #     deploy_layers:
+  #       description: 'Deploy specific layers (comma-separated)'
+  #       required: false
+  #       type: string
+  #     use_s3_source:
+  #       description: 'Use existing S3 source code (skip build)'
+  #       required: false
+  #       default: false
+  #       type: boolean
+  #     s3_prefix:
+  #       description: 'S3 prefix for source code (if using S3 source)'
+  #       required: false
+  #       type: string
+
+env:
+  AWS_REGION: ap-southeast-1
+  TERRAFORM_VERSION: 1.5.0
+
+jobs:
+  # =============================================================================
+  # JOB 1: DETECT CHANGES - Phát hiện thay đổi (IMPROVED)
+  # =============================================================================
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      functions: ${{ steps.changes.outputs.functions }}    # Functions cần deploy
+      layers: ${{ steps.changes.outputs.layers }}          # Layers cần deploy
+      has-changes: ${{ steps.changes.outputs.has-changes }} # Có thay đổi không
+      specific-functions: ${{ steps.changes.outputs.specific-functions }} # Functions cụ thể
+      specific-layers: ${{ steps.changes.outputs.specific-layers }}       # Layers cụ thể
+    steps:
+      # STEP 1.1: Checkout code từ GitHub repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Lấy toàn bộ git history để so sánh
+
+      # STEP 1.2: Detect changes - Phát hiện thay đổi (IMPROVED)
+      - name: Detect changes
+        id: changes
+        run: |
+          echo "Detecting changes for TMA_PROD project..."
+          
+          # Lấy danh sách files đã thay đổi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Nếu là Pull Request, so sánh với base branch
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          else
+            # Nếu là push, so sánh với commit trước
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+          
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Detect specific functions that need deployment
+          FUNCTIONS=""
+          SPECIFIC_FUNCTIONS=""
+          
+          if echo "$CHANGED_FILES" | grep -q "TMA_PROD/devops/"; then
+            echo "Terraform changes detected - analyzing specific functions..."
+            
+            # Check for specific lambda function changes
+            if echo "$CHANGED_FILES" | grep -q "lambda_functions.tf\|lambda_edge.tf"; then
+              echo "Lambda function configuration changed - will deploy all functions"
+              FUNCTIONS="ALL"
+              SPECIFIC_FUNCTIONS="ALL"
+            elif echo "$CHANGED_FILES" | grep -q "infra.tfvars\|main.tf"; then
+              echo "Infrastructure configuration changed - will deploy all functions"
+              FUNCTIONS="ALL"
+              SPECIFIC_FUNCTIONS="ALL"
+            else
+              echo "Other Terraform changes detected - will deploy all functions"
+              FUNCTIONS="ALL"
+              SPECIFIC_FUNCTIONS="ALL"
+            fi
+          else
+            echo "No relevant changes detected"
+            FUNCTIONS=""
+            SPECIFIC_FUNCTIONS=""
+          fi
+          
+          # Detect specific layers that need deployment
+          LAYERS=""
+          SPECIFIC_LAYERS=""
+          
+          if echo "$CHANGED_FILES" | grep -q "TMA_PROD/devops/"; then
+            echo "Terraform changes detected - analyzing specific layers..."
+            
+            # Check for specific layer changes
+            if echo "$CHANGED_FILES" | grep -q "lambda_layer.tf\|layers/"; then
+              echo "Layer configuration changed - will deploy all layers"
+              LAYERS="ALL"
+              SPECIFIC_LAYERS="ALL"
+            elif echo "$CHANGED_FILES" | grep -q "infra.tfvars\|main.tf"; then
+              echo "Infrastructure configuration changed - will deploy all layers"
+              LAYERS="ALL"
+              SPECIFIC_LAYERS="ALL"
+            else
+              echo "Other Terraform changes detected - will deploy all layers"
+              LAYERS="ALL"
+              SPECIFIC_LAYERS="ALL"
+            fi
+          else
+            echo "No relevant changes detected"
+            LAYERS=""
+            SPECIFIC_LAYERS=""
+          fi
+          
+          # Output results
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "layers=$LAYERS" >> $GITHUB_OUTPUT
+          echo "specific-functions=$SPECIFIC_FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "specific-layers=$SPECIFIC_LAYERS" >> $GITHUB_OUTPUT
+          
+          if [ -n "$FUNCTIONS" ] || [ -n "$LAYERS" ]; then
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected - Functions: [$FUNCTIONS], Layers: [$LAYERS]"
+            echo "📋 Specific - Functions: [$SPECIFIC_FUNCTIONS], Layers: [$SPECIFIC_LAYERS]"
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes detected"
+          fi
+
+  # =============================================================================
+  # JOB 2: BUILD AND DEPLOY - Build và Deploy
+  # =============================================================================
+  build-and-deploy:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      # STEP 2.1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # STEP 2.2: Setup AWS CLI
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # STEP 2.3: Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      # STEP 2.4: Setup Node.js (for building source code)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # STEP 2.5: Install dependencies
+      - name: Install dependencies
+        run: |
+          cd TMA_PROD/devops
+          npm install
+
+      # STEP 2.6: List S3 source code (for visibility)
+      - name: List S3 source code
+        run: |
+          cd TMA_PROD/devops
+          ./scripts/list-s3-source.sh \
+            --bucket ${{ secrets.S3_BUCKET }} \
+            --prefix "prod/release2.0"
+
+      # STEP 2.7: Build and deploy from source code (DISABLED)
+      - name: Build and deploy from source code
+        if: false  # Disabled - source code is built externally
+        run: |
+          cd TMA_PROD/devops
+          ./scripts/deploy-lambda.sh \
+            --bucket ${{ secrets.S3_BUCKET }} \
+            --environment prod \
+            --prefix "prod/release2.0" \
+            --functions "${{ needs.detect-changes.outputs.functions }}" \
+            --layers "${{ needs.detect-changes.outputs.layers }}"
+
+      # STEP 2.8: Deploy from S3 source code (ENABLED)
+      - name: Deploy from S3 source code
+        run: |
+          cd TMA_PROD/devops
+          
+          if [ "${{ needs.detect-changes.outputs.functions }}" = "ALL" ]; then
+            echo "🚀 Deploying ALL functions from S3..."
+            ./scripts/map-and-deploy.sh \
+              --bucket ${{ secrets.S3_BUCKET }} \
+              --environment prod \
+              --prefix "prod/release2.0" \
+              --force
+          fi
+          
+          if [ "${{ needs.detect-changes.outputs.layers }}" = "ALL" ]; then
+            echo "🚀 Deploying ALL layers from S3..."
+            ./scripts/map-and-deploy.sh \
+              --bucket ${{ secrets.S3_BUCKET }} \
+              --environment prod \
+              --prefix "prod/release2.0" \
+              --force
+          fi
+
+      # STEP 2.9: Apply Terraform changes
+      - name: Apply Terraform changes
+        run: |
+          cd TMA_PROD/devops/env/prod
+          terraform init
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan
+          echo "✅ TMA_PROD deployment completed successfully"
+
+      # STEP 2.10: Cleanup
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "🧹 Cleaning up temporary files..."
+          rm -f TMA_PROD/devops/env/prod/tfplan
+          echo "✅ Cleanup completed"

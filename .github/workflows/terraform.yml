@@ -1,0 +1,152 @@
+name: Terraform CI/CD
+
+on:
+  push:
+    branches: [devops]
+    paths:
+      - 'env/**'
+      - 'modules/**'
+      - 'bootstrap/**'
+
+env:
+  AWS_REGION: us-east-2
+  TF_VERSION: 1.9.0
+  WORKING_DIR: env/prod
+
+jobs:
+  # ============================================================
+  # JOB 1: TERRAFORM PLAN
+  # ============================================================
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    outputs:
+      has-changes: ${{ steps.plan.outputs.has-changes }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          terraform init \
+            -backend-config="profile=" \
+            -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          set +e
+          terraform plan \
+            -var-file="infra.tfvars" \
+            -out=tfplan \
+            -detailed-exitcode 2>&1 | tee plan-output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+
+          # Exit code: 0 = no changes, 2 = has changes, 1 = error
+          if [ $EXIT_CODE -eq 1 ]; then
+            echo "❌ Terraform plan failed!"
+            exit 1
+          elif [ $EXIT_CODE -eq 2 ]; then
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected"
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes to apply"
+          fi
+
+      - name: Upload plan output
+        if: steps.plan.outputs.has-changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: |
+            ${{ env.WORKING_DIR }}/tfplan
+            ${{ env.WORKING_DIR }}/plan-output.txt
+          retention-days: 1
+
+      - name: Show plan summary
+        if: steps.plan.outputs.has-changes == 'true'
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          echo "======================================"
+          echo "📋 TERRAFORM PLAN SUMMARY"
+          echo "======================================"
+          cat plan-output.txt
+          echo "======================================"
+          echo "⏳ Waiting for manual approval to apply..."
+
+  # ============================================================
+  # JOB 2: MANUAL APPROVAL
+  # Cần setup environment 'production' trên GitHub:
+  # Settings → Environments → production → Required reviewers
+  # ============================================================
+  wait-for-approval:
+    name: Wait for Approval
+    needs: terraform-plan
+    if: needs.terraform-plan.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Approved
+        run: echo "✅ Approved! Proceeding with terraform apply..."
+
+  # ============================================================
+  # JOB 3: TERRAFORM APPLY
+  # ============================================================
+  terraform-apply:
+    name: Terraform Apply
+    needs: [terraform-plan, wait-for-approval]
+    if: needs.terraform-plan.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          terraform init \
+            -backend-config="profile=" \
+            -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: ${{ env.WORKING_DIR }}
+
+      - name: Terraform Apply
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          terraform apply -auto-approve tfplan
+          echo "✅ Terraform apply completed!"

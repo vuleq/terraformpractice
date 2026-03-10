@@ -1,0 +1,76 @@
+name: Step-by-Step Pipeline
+
+on:
+  push:
+    branches: [ 'vule/tma/prod-2.0.1-draft' ]
+    paths:
+      - 'TMA_PROD/devops/**'
+
+jobs:
+  step1-info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Step 1 - Display Information
+        run: |
+          echo "🔍 STEP 1: Display Information"
+          echo "================================"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "================================"
+          echo "✅ Step 1 completed!"
+  
+  step2-files:
+    needs: step1-info
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Step 2 - List Files
+        run: |
+          echo "📁 STEP 2: List Files"
+          echo "================================"
+          echo "Files in TMA_PROD/devops:"
+          ls -la TMA_PROD/devops/
+          echo ""
+          echo "Files in TMA_PROD/devops/env/prod:"
+          ls -la TMA_PROD/devops/env/prod/
+          echo "================================"
+          echo "✅ Step 2 completed!"
+  
+  step3-changes:
+    needs: step2-files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Step 3 - Detect Changes
+        run: |
+          echo "🔍 STEP 3: Detect Changes"
+          echo "================================"
+          
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo ""
+          
+          # Check if Terraform files changed
+          if echo "$CHANGED_FILES" | grep -q "TMA_PROD/devops/"; then
+            echo "✅ Terraform changes detected!"
+            echo "Will proceed with deployment..."
+          else
+            echo "ℹ️ No Terraform changes detected"
+            echo "Skipping deployment..."
+          fi
+          echo "================================"
+          echo "✅ Step 3 completed!"

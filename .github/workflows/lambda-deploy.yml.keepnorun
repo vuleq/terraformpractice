@@ -1,0 +1,280 @@
+name: TMA_PROD Lambda Deployment
+
+on:
+  push:
+    branches: [ main, develop, 'vule/tma/prod-2.0.*', 'tma/prod-2.0.*' ]
+    paths:
+      - 'TMA_PROD/BE_sourceCodes/backend-services/functions/**'
+      - 'TMA_PROD/BE_sourceCodes/backend-services/layers/**'
+      - 'TMA_PROD/devops/**'
+  pull_request:
+    branches: [ main, 'vule/tma/prod-2.0.*', 'tma/prod-2.0.*', 'vule/tma/uat-2.0.*' ]
+    paths:
+      - 'TMA_PROD/BE_sourceCodes/backend-services/functions/**'
+      - 'TMA_PROD/BE_sourceCodes/backend-services/layers/**'
+      - 'TMA_PROD/devops/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+        - prod
+        - uat
+      force_deploy:
+        description: 'Force deploy all functions and layers'
+        required: false
+        default: false
+        type: boolean
+      deploy_functions:
+        description: 'Deploy specific functions (comma-separated)'
+        required: false
+        type: string
+      deploy_layers:
+        description: 'Deploy specific layers (comma-separated)'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: ap-southeast-1
+  NODE_VERSION: '18.x'
+  PROJECT_NAME: 'TMA_PROD'
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      functions: ${{ steps.changes.outputs.functions }}
+      layers: ${{ steps.changes.outputs.layers }}
+      has-changes: ${{ steps.changes.outputs.has-changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        run: |
+          echo "Detecting changes for TMA_PROD project..."
+          
+          # Get changed files
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+          
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Detect function changes
+          FUNCTIONS=""
+          if [ "${{ github.event.inputs.force_deploy }}" = "true" ] || [ "${{ github.event.inputs.deploy_functions }}" != "" ]; then
+            if [ "${{ github.event.inputs.deploy_functions }}" != "" ]; then
+              FUNCTIONS="${{ github.event.inputs.deploy_functions }}"
+            else
+              # Get all functions from TMA_PROD
+              FUNCTIONS=$(find TMA_PROD/BE_sourceCodes/backend-services/functions -maxdepth 1 -type d -name "*" | sed 's|.*/||' | grep -v "^$" | tr '\n' ' ')
+            fi
+          else
+            # Detect changed functions
+            CHANGED_FUNCTIONS=$(echo "$CHANGED_FILES" | grep "TMA_PROD/BE_sourceCodes/backend-services/functions/" | cut -d'/' -f5 | sort -u | tr '\n' ' ')
+            FUNCTIONS="$CHANGED_FUNCTIONS"
+          fi
+          
+          # Detect layer changes
+          LAYERS=""
+          if [ "${{ github.event.inputs.force_deploy }}" = "true" ] || [ "${{ github.event.inputs.deploy_layers }}" != "" ]; then
+            if [ "${{ github.event.inputs.deploy_layers }}" != "" ]; then
+              LAYERS="${{ github.event.inputs.deploy_layers }}"
+            else
+              # Get all layers from TMA_PROD
+              LAYERS=$(find TMA_PROD/BE_sourceCodes/backend-services/layers -maxdepth 1 -type d -name "*" | sed 's|.*/||' | grep -v "^$" | tr '\n' ' ')
+            fi
+          else
+            # Detect changed layers
+            CHANGED_LAYERS=$(echo "$CHANGED_FILES" | grep "TMA_PROD/BE_sourceCodes/backend-services/layers/" | cut -d'/' -f5 | sort -u | tr '\n' ' ')
+            LAYERS="$CHANGED_LAYERS"
+          fi
+          
+          echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "layers=$LAYERS" >> $GITHUB_OUTPUT
+          
+          if [ -n "$FUNCTIONS" ] || [ -n "$LAYERS" ]; then
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected - Functions: [$FUNCTIONS], Layers: [$LAYERS]"
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes detected"
+          fi
+
+  build-and-deploy:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'prod' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Install dependencies
+        run: |
+          cd TMA_PROD/BE_sourceCodes/backend-services
+          npm install
+
+      - name: Build and zip functions
+        id: build-functions
+        if: needs.detect-changes.outputs.functions != ''
+        run: |
+          echo "Building functions: ${{ needs.detect-changes.outputs.functions }}"
+          
+          # Create output directory
+          mkdir -p ../../zipped-functions-layers-tmaprod
+          
+          # Build each function
+          for func in ${{ needs.detect-changes.outputs.functions }}; do
+            if [ -d "functions/$func" ]; then
+              echo "Building function: $func"
+              cd "functions/$func"
+              
+              # Install dependencies if package.json exists
+              if [ -f "package.json" ]; then
+                npm install --production
+              fi
+              
+              # Create zip file
+              zip -r "../../../zipped-functions-layers-tmaprod/wdr-$func.zip" . -x "node_modules/.cache/*" "*.log"
+              
+              echo "✅ Built: wdr-$func.zip"
+              cd ../..
+            else
+              echo "⚠️ Function directory not found: functions/$func"
+            fi
+          done
+
+      - name: Build and zip layers
+        id: build-layers
+        if: needs.detect-changes.outputs.layers != ''
+        run: |
+          echo "Building layers: ${{ needs.detect-changes.outputs.layers }}"
+          
+          # Build each layer
+          for layer in ${{ needs.detect-changes.outputs.layers }}; do
+            if [ -d "layers/$layer" ]; then
+              echo "Building layer: $layer"
+              cd "layers/$layer"
+              
+              # Install dependencies if package.json exists
+              if [ -f "package.json" ]; then
+                npm install --production
+              fi
+              
+              # Create zip file
+              zip -r "../../../zipped-functions-layers-tmaprod/layers/wdr-$layer-layer.zip" . -x "node_modules/.cache/*" "*.log"
+              
+              echo "✅ Built: wdr-$layer-layer.zip"
+              cd ../..
+            else
+              echo "⚠️ Layer directory not found: layers/$layer"
+            fi
+          done
+
+      - name: Upload to S3
+        run: |
+          # Generate release date
+          RELEASE_DATE=$(date +"%m%d%Y")
+          echo "Release date: $RELEASE_DATE"
+          
+          # Upload functions and layers
+          if [ -d "zipped-functions-layers-tmaprod" ]; then
+            echo "Uploading to S3..."
+            aws s3 sync zipped-functions-layers-tmaprod/ s3://${{ secrets.S3_BUCKET }}/${{ github.event.inputs.environment || 'prod' }}/release2.0/$RELEASE_DATE/ \
+              --exclude "*.log" \
+              --exclude "node_modules/.cache/*"
+            
+            echo "✅ Uploaded to S3: s3://${{ secrets.S3_BUCKET }}/${{ github.event.inputs.environment || 'prod' }}/release2.0/$RELEASE_DATE/"
+          fi
+
+      - name: Update Terraform configuration
+        run: |
+          cd TMA_PROD/devops/env/${{ github.event.inputs.environment || 'prod' }}
+          
+          # Backup current config
+          cp infra.tfvars infra.tfvars.backup.$(date +%Y%m%d_%H%M%S)
+          
+          # Update S3 paths in infra.tfvars
+          RELEASE_DATE=$(date +"%m%d%Y")
+          
+          # Update function paths
+          if [ "${{ needs.detect-changes.outputs.functions }}" != "" ]; then
+            for func in ${{ needs.detect-changes.outputs.functions }}; do
+              # Update the S3 key for this function in infra.tfvars
+              sed -i "s|s3_key.*=.*\"lambda_functions/wdr-$func.zip\"|s3_key = \"${{ github.event.inputs.environment || 'prod' }}/release2.0/$RELEASE_DATE/wdr-$func.zip\"|g" infra.tfvars
+            done
+          fi
+          
+          # Update layer paths
+          if [ "${{ needs.detect-changes.outputs.layers }}" != "" ]; then
+            for layer in ${{ needs.detect-changes.outputs.layers }}; do
+              # Update the S3 key for this layer in infra.tfvars
+              sed -i "s|s3_key.*=.*\"layers/wdr-$layer-layer.zip\"|s3_key = \"${{ github.event.inputs.environment || 'prod' }}/release2.0/$RELEASE_DATE/layers/wdr-$layer-layer.zip\"|g" infra.tfvars
+            done
+          fi
+          
+          echo "✅ Updated Terraform configuration"
+
+      - name: Terraform Plan
+        run: |
+          cd TMA_PROD/devops/env/${{ github.event.inputs.environment || 'prod' }}
+          terraform init
+          terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        if: github.event_name != 'pull_request'
+        run: |
+          cd TMA_PROD/devops/env/${{ github.event.inputs.environment || 'prod' }}
+          terraform apply -auto-approve tfplan
+          echo "✅ TMA_PROD deployment completed successfully"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf zipped-functions-layers-tmaprod/
+          echo "🧹 Cleaned up temporary files"
+
+  notify:
+    needs: [detect-changes, build-and-deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify deployment status
+        run: |
+          if [ "${{ needs.build-and-deploy.result }}" = "success" ]; then
+            echo "✅ TMA_PROD deployment successful"
+            echo "Functions deployed: ${{ needs.detect-changes.outputs.functions }}"
+            echo "Layers deployed: ${{ needs.detect-changes.outputs.layers }}"
+          else
+            echo "❌ TMA_PROD deployment failed"
+            exit 1
+          fi

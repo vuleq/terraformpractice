@@ -1,0 +1,252 @@
+{
+  "Comment": "Project Export Workflow - Distributed Map",
+  "StartAt": "ParallelExports",
+  "States": {
+    "ParallelExports": {
+      "Type": "Parallel",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "SendFailureNotification"
+        }
+      ],
+      "Branches": [
+        {
+          "StartAt": "ExportMetadata",
+          "States": {
+            "ExportMetadata": {
+              "Type": "Task",
+              "Resource": "${export_metadata_arn}",
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "StartAt": "ExportJobList",
+          "States": {
+            "ExportJobList": {
+              "Type": "Task",
+              "Resource": "${export_joblist_arn}",
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "StartAt": "GetJobsForExport",
+          "States": {
+            "GetJobsForExport": {
+              "Type": "Task",
+              "Resource": "${get_jobs_arn}",
+              "Next": "Choice",
+              "Assign": {
+                "jobsDataKey.$": "$.jobsDataKey",
+                "bucketName.$": "$.bucketName"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            },
+            "Choice": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Next": "SkipJobProcess",
+                  "Variable": "$.jobCount",
+                  "NumericEquals": 0
+                }
+              ],
+              "Default": "ProcessJobsDistributed"
+            },
+            "SkipJobProcess": {
+              "Type": "Pass",
+              "End": true
+            },
+            "ProcessJobsDistributed": {
+              "Type": "Map",
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "DISTRIBUTED",
+                  "ExecutionType": "STANDARD"
+                },
+                "StartAt": "ParallelJobProcessing",
+                "States": {
+                  "ParallelJobProcessing": {
+                    "Type": "Parallel",
+                    "Branches": [
+                      {
+                        "StartAt": "CopyJobResource",
+                        "States": {
+                          "CopyJobResource": {
+                            "Type": "Task",
+                            "Resource": "${copy_job_resource_arn}",
+                            "End": true,
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "States.TaskFailed"
+                                ],
+                                "IntervalSeconds": 2,
+                                "MaxAttempts": 3,
+                                "BackoffRate": 2
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "StartAt": "IsJobHasReport",
+                        "States": {
+                          "IsJobHasReport": {
+                            "Type": "Choice",
+                            "Choices": [
+                              {
+                                "Next": "ExportReportPDF",
+                                "Variable": "$.report_id",
+                                "IsNull": false
+                              }
+                            ],
+                            "Default": "SkipPDF"
+                          },
+                          "ExportReportPDF": {
+                            "Type": "Task",
+                            "Resource": "${pdf_generator_arn}",
+                            "End": true,
+                            "Retry": [
+                              {
+                                "ErrorEquals": [
+                                  "States.TaskFailed"
+                                ],
+                                "IntervalSeconds": 5,
+                                "MaxAttempts": 2,
+                                "BackoffRate": 2
+                              }
+                            ]
+                          },
+                          "SkipPDF": {
+                            "Type": "Pass",
+                            "End": true
+                          }
+                        }
+                      }
+                    ],
+                    "End": true
+                  }
+                }
+              },
+              "ItemReader": {
+                "Resource": "arn:aws:states:::s3:getObject",
+                "ReaderConfig": {
+                  "InputType": "JSON"
+                },
+                "Parameters": {
+                  "Bucket.$": "$.bucketName",
+                  "Key.$": "$.jobsDataKey"
+                }
+              },
+              "MaxConcurrency": 10,
+              "ToleratedFailurePercentage": 5,
+              "Next": "DeleteObject"
+            },
+            "DeleteObject": {
+              "Type": "Task",
+              "Parameters": {
+                "Bucket.$": "$bucketName",
+                "Key.$": "$jobsDataKey"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:s3:deleteObject",
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "CombineExports"
+    },
+    "CombineExports": {
+      "Type": "Task",
+      "Resource": "${combine_exports_arn}",
+      "Parameters": {
+        "projectId.$": "$$.Execution.Input.projectId",
+        "exportFolder.$": "$$.Execution.Input.exportFolder",
+        "outputFile.$": "$$.Execution.Input.outputFile",
+        "actor.$": "$$.Execution.Input.actor",
+        "projectName.$": "$$.Execution.Input.projectName"
+      },
+      "Next": "SendSuccessNotification",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "SendFailureNotification"
+        }
+      ],
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ]
+    },
+    "SendSuccessNotification": {
+      "Type": "Task",
+      "Resource": "${export_notification_arn}",
+      "Parameters": {
+        "status": "SUCCESS",
+        "projectId.$": "$$.Execution.Input.projectId",
+        "exportFolder.$": "$$.Execution.Input.exportFolder",
+        "actor.$": "$$.Execution.Input.actor",
+        "projectName.$": "$$.Execution.Input.projectName",
+        "message": "Project export completed successfully",
+        "zipKey.$": "$.zipKey"
+      },
+      "End": true
+    },
+    "SendFailureNotification": {
+      "Type": "Task",
+      "Resource": "${export_notification_arn}",
+      "Parameters": {
+        "status": "FAILED",
+        "projectId.$": "$$.Execution.Input.projectId",
+        "exportFolder.$": "$$.Execution.Input.exportFolder",
+        "actor.$": "$$.Execution.Input.actor",
+        "projectName.$": "$$.Execution.Input.projectName",
+        "error.$": "$.Error",
+        "message": "Project export failed"
+      },
+      "End": true
+    }
+  }
+}

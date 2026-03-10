@@ -1,0 +1,47 @@
+# Ignore scripts folder
+scripts/
+env/prod/scripts/
+env/uat/scripts/
+env/prod/new scripts/
+env/prod/linh tinh/
+
+# Ignore Terraform state files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Ignore logs
+*.log
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore environment files
+.env
+.env.local
+.env.production
+.env.development
+
+# Ignore backup files
+*.bak
+*.backup
+
+# Ignore zip files (if you don't want to track them)
+*.zip 

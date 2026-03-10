@@ -1,0 +1,83 @@
+'use strict';
+
+export const handler = async (event, context, callback) => {
+    // TERRAFORM_REPLACE_START:CORS_ORIGINS
+const ALLOWED_ORIGINS = [
+    'https://d2o32ci9a5hhym.cloudfront.net',
+    'https://dmwji128fkqvu.cloudfront.net',
+    'http://localhost:4200',
+    'http://localhost:8100',
+    'http://localhost:8101',
+    'http://localhost:*',
+    'http://127.0.0.1:*',
+    'https://prod-wdr-maritimeapps-deploy-lambda-fe-source6.s3.ap-southeast-1.amazonaws.com',
+    'https://prod-wdr-maritimeapps-deploy-lambda-fe-source6.s3.amazonaws.com',
+    'https://prod-wdr-maritimeapps-deploy-lambda-assets6.s3.ap-southeast-1.amazonaws.com',
+    'https://prod-wdr-maritimeapps-deploy-lambda-assets6.s3.amazonaws.com',
+    'http://prod-wdr-maritimeapps-deploy-lambda-fe-source6.s3-website-ap-southeast-1.amazonaws.com',
+    'http://prod-wdr-maritimeapps-deploy-lambda-assets6.s3-website-ap-southeast-1.amazonaws.com'
+];
+// TERRAFORM_REPLACE_END:CORS_ORIGINS
+
+    
+    const cf = event.Records[0].cf;
+    const request = cf.request;
+    const response = cf.response;
+    const headers = response.headers;
+    
+    const requestOrigin = request.headers.origin ? request.headers.origin[0].value : undefined;
+    
+    const isOriginAllowed = (origin) => {
+        if (!origin) return false;
+        
+        if (ALLOWED_ORIGINS.includes(origin)) {
+            return true;
+        }
+        
+        return ALLOWED_ORIGINS.some(allowedOrigin => {
+            if (allowedOrigin.includes('*')) {
+                // Convert wildcard pattern to regex
+                // http://localhost:* -> http://localhost:\d+
+                // https://*.googleapis.com -> https://.*\.googleapis\.com
+                const pattern = allowedOrigin
+                    .replace(/\./g, '\\.')
+                    .replace(/\*/g, allowedOrigin.includes('localhost:*') ? '\\d+' : '[^.]+');
+                const regex = new RegExp(`^${pattern}$`);
+                return regex.test(origin);
+            }
+            return false;
+        });
+    };
+    
+    if (requestOrigin && isOriginAllowed(requestOrigin)) {
+        headers['access-control-allow-origin'] = [{
+            key: 'Access-Control-Allow-Origin',
+            value: requestOrigin
+        }];
+        headers['vary'] = [{
+            key: 'Vary',
+            value: 'Origin'
+        }];
+        headers['access-control-allow-methods'] = [{
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, HEAD, OPTIONS, POST, PUT, DELETE, PATCH'
+        }];
+        headers['access-control-allow-headers'] = [{
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type,Authorization'
+        }];
+        headers['access-control-allow-credentials'] = [{
+           key: 'Access-Control-Allow-Credentials',
+           value: 'true'
+        }];
+        console.log(`CORS allowed for origin: ${requestOrigin}`);
+    } else {
+        delete headers['access-control-allow-origin'];
+        delete headers['access-control-allow-credentials'];
+        if (requestOrigin) {
+            console.log(`CORS denied for origin: ${requestOrigin}`);
+        }
+    }
+    
+    callback(null, response);
+};

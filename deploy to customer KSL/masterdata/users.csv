@@ -1,0 +1,55 @@
+"id","family_name","middle_name","given_name","address","gender","email","phone_number","user_type","name","avt","status","start_date"
+"99a150c2-18d2-4de5-85b3-02ffae4b9fec","Bafalo",NULL,"Jack",NULL,NULL,"kumarramesh@paxocean.com",NULL,NULL,"Ramesh Kumar",NULL,0,NULL
+"b36f2d32-6863-407c-a12f-c00a6a98017e","Welder",NULL,"Tom",NULL,NULL,"xuanong@paxocean.com",NULL,NULL,"Ong Li Xuan",NULL,0,NULL
+"8c30d074-12a1-4df8-b00a-f4b7af2b3839","Flint",NULL,"Sol",NULL,NULL,"huilim@paxocean.com",NULL,NULL,"Lim Jia Hui",NULL,0,NULL
+"b0aa8e65-36d9-420e-a9e5-ff9eafbc2332",NULL,NULL,"Magendran",NULL,NULL,"subramaniamdeepa@paxocean.com",NULL,NULL,"Deepa Subramaniam",NULL,0,NULL
+"00000000-0000-0000-0000-000000000000","Steel",NULL,"John",NULL,NULL,NULL,NULL,NULL,"John Steel",NULL,0,NULL
+"675de197-2e1f-49f4-9bd8-1b9882755767","Nguyen",NULL,"Van",NULL,NULL,"nguyenvana@example.com","+84901234567",NULL,"Nguyen Van",NULL,1,"2025-07-15"
+"6b755193-6efe-495a-aa69-6be3e274c4e5","Nguyen",NULL,"Tan",NULL,NULL,"nguyentan@example.com",NULL,NULL,"Nguyen Tan",NULL,0,NULL
+"042c25fd-b48c-4be5-adad-5eb7cd4d76d3",NULL,NULL,NULL,NULL,NULL,"delbert.melendres@paxocean.com",NULL,NULL,"Delbert",NULL,0,NULL
+"ad6b248d-9f97-439e-acad-ef791f23b392",NULL,NULL,NULL,NULL,NULL,"muhammad.haikal@paxocean.com",NULL,NULL,"Haikal",NULL,0,NULL
+"6d7cb79a-b15d-47b8-aa10-5e48e2b9168b",NULL,NULL,NULL,NULL,NULL,"tinku.nepal@paxocean.com",NULL,NULL,"Tinku",NULL,0,NULL
+"40ab68b8-16ec-4087-b474-e14f264b81ff",NULL,NULL,NULL,NULL,NULL,"chandram.babu@PAXOCEAN.COM",NULL,NULL,"PC Babu",NULL,0,NULL
+"ad2746b1-981a-4ae8-be02-a7dab807054a",NULL,NULL,NULL,NULL,NULL,"m.mobarak@paxocean.com",NULL,NULL,"Mobarak",NULL,0,NULL
+"7203d146-de28-441c-bc81-cfde317063a8",NULL,NULL,NULL,NULL,NULL,"satya.narayan@paxocean.com",NULL,NULL,"Satya Narayan",NULL,0,NULL
+"44cbac45-ce02-45b6-b80c-586b2f3caab3",NULL,NULL,NULL,NULL,NULL,"kandiri.raj@paxocean.com",NULL,NULL,"Pushparaj",NULL,0,NULL
+"ddfee192-1e1e-4a85-a66f-80b7bf765696",NULL,NULL,NULL,NULL,NULL,"chandra.sekar@paxocean.com",NULL,NULL,"Chandra Suresh",NULL,0,NULL
+"d1645a0f-787c-4a02-91dc-55da1ceab849",NULL,NULL,NULL,NULL,NULL,"shamal.chandra@PAXOCEAN.COM",NULL,NULL,"Shamal",NULL,0,NULL
+"a4f1ad9e-712c-4e88-9b0f-b22189af183e",NULL,NULL,NULL,NULL,NULL,"pt.lim@paxocean.com",NULL,NULL,"Lim Puay Teck",NULL,0,NULL
+"0cd507b4-4d6f-4918-9310-7c880fe5607c",NULL,NULL,NULL,NULL,NULL,"edwin.abrico@paxocean.com",NULL,NULL,"Edwin Rivera",NULL,0,NULL
+"ed1faf18-f58b-447f-a4dc-2dafaa8fa212",NULL,NULL,NULL,NULL,NULL,"ravichandran.k@paxocean.com",NULL,NULL,"Kaliyaperumal Ravichandran",NULL,0,NULL
+"0f5fbff4-97ab-4f1d-8c0b-f4e8de4396dd",NULL,NULL,NULL,NULL,NULL,"maity.rajib@PaxOcean.com",NULL,NULL,"Maity Rajib",NULL,0,NULL
+"e665b25f-b2b8-4697-856f-4523e9d4698d",NULL,NULL,NULL,NULL,NULL,"s.satyanarayana@paxocean.com",NULL,NULL,"Seelaboyina Satyanarayana",NULL,0,NULL
+"b442d339-85a6-4e39-80a5-6aaf8e89752c",NULL,NULL,NULL,NULL,NULL,"aung.myo@paxocean.com",NULL,NULL,"Myo Aung",NULL,0,NULL
+"661a94e7-101c-43c9-8400-7b5ecbea6454",NULL,NULL,NULL,NULL,NULL,"palvirendrakumar.satiram@paxocean.com",NULL,NULL,"Pal Virendra Kumar Satiram",NULL,0,NULL
+"029fa8a7-4c20-49d1-b711-3bca2c78f9af",NULL,NULL,NULL,NULL,NULL,"afsar.uddin@paxocean.com",NULL,NULL,"Uddin Afsar",NULL,0,NULL
+"ce4eddd5-a5f6-4619-a8f8-5d79c9669923",NULL,NULL,NULL,NULL,NULL,"sanskaran.prasad@paxocean.com",NULL,NULL,"Prasad Sankaran",NULL,0,NULL
+"66322301-d964-4043-9a0e-fa0fcb869b91",NULL,NULL,NULL,NULL,NULL,"nalin.guna@paxocean.com",NULL,NULL,"Nalin Guna",NULL,0,NULL
+"3d3880d8-0bd8-49b0-9f7b-de3d28c8071d",NULL,NULL,NULL,NULL,NULL,"ian.irwan@PaxOcean.com",NULL,NULL,"Irwan",NULL,0,NULL
+"f2cbfc96-c0ac-4cc1-bf9e-eadf3100d403",NULL,NULL,NULL,NULL,NULL,"rashid.mamunur@paxocean.com",NULL,NULL,"Mamun",NULL,0,NULL
+"b7746030-fa73-4cd4-bbd9-6c4883669f14",NULL,NULL,NULL,NULL,NULL,"san.kumar@paxocean.com",NULL,NULL,"Sanjay",NULL,0,NULL
+"87abbe3c-3cf7-47c4-9dd7-4f810b9d740a",NULL,NULL,NULL,NULL,NULL,"joseph.kennedi@paxocean.com",NULL,NULL,"Kennedi",NULL,0,NULL
+"0a628290-eb65-4122-8d89-53c22d7093f4",NULL,NULL,NULL,NULL,NULL,"kaung.htetzaw@paxocean.com",NULL,NULL,"Kaung",NULL,0,NULL
+"a2bdc883-5c89-408e-923d-a5c044929172",NULL,NULL,NULL,NULL,NULL,"aung.komin@paxocean.com",NULL,NULL,"Aung",NULL,0,NULL
+"4a2087da-7ae5-42c7-91a8-2e32d589a7c2",NULL,NULL,NULL,NULL,NULL,"chingching.lim@paxocean.com",NULL,NULL,"Srinivas",NULL,0,NULL
+"f14d64b7-ba54-44d8-9774-7707a38813c6",NULL,NULL,NULL,NULL,NULL,"moe.lwin@paxocean.com",NULL,NULL,"Moe Lwin",NULL,0,NULL
+"4051efd6-5755-4570-a9bd-1b024b70c22c",NULL,NULL,NULL,NULL,NULL,"Thankappan.Ananth@paxocean.com",NULL,NULL,"Ananth",NULL,0,NULL
+"2530dd15-ddd0-4d61-a9df-b714cc404135",NULL,NULL,NULL,NULL,NULL,"Nelli.Saibabu@paxocean.com",NULL,NULL,"Saibabu",NULL,0,NULL
+"1b819d8e-1952-4e4f-b483-b85af2f31995",NULL,NULL,NULL,NULL,NULL,"rumi.rahim@PaxOcean.com",NULL,NULL,"Rumi",NULL,0,NULL
+"1a14b670-7f74-49f0-ad56-3ef92814f6ae",NULL,NULL,NULL,NULL,NULL,"ganesan.thirumurugan@paxocean.com",NULL,NULL,"Thiru",NULL,0,NULL
+"934c6465-9546-4d9d-a4d8-07090f137202",NULL,NULL,NULL,NULL,NULL,"khun.kyawphay@PaxOcean.com",NULL,NULL,"Khun Kyaw Phay",NULL,0,NULL
+"97e81086-cc87-46a2-9529-0aa9292a95bd",NULL,NULL,NULL,NULL,NULL,"tamilselvan.mr@paxocean.com",NULL,NULL,"Tamil Selvan Muthu Raman",NULL,0,NULL
+"92386c91-20e3-4362-aa87-c639c5ced54d",NULL,NULL,NULL,NULL,NULL,"rayan.simon@paxocean.com",NULL,NULL,"Rayan Peter Simon",NULL,0,NULL
+"8a5c2ace-c6ca-41ec-a4eb-ae53f1d861b6",NULL,NULL,NULL,NULL,NULL,"alvin.monton@paxocean.com",NULL,NULL,"Monton Alvin Jumao-As",NULL,0,NULL
+"54222aeb-2624-4924-8683-5c2a1871b09c",NULL,NULL,NULL,NULL,NULL,"harpreet.singh@paxocean.com",NULL,NULL,"Harpreet Singh",NULL,0,NULL
+"f493ea0c-b9ee-4b0c-b1f3-4fbdd101ca82",NULL,NULL,NULL,NULL,NULL,"mohammad.mohshin@PaxOcean.com",NULL,NULL,"Mohshin Mohammad",NULL,0,NULL
+"cda4625a-1581-4c58-aedc-28bb030d679f",NULL,NULL,NULL,NULL,NULL,"milton.hossain@paxocean.com",NULL,NULL,"Hossain Md Milton",NULL,0,NULL
+"029f687a-f14e-4fd8-bd42-6205cd6b19de",NULL,NULL,NULL,NULL,NULL,"b.viswanadham@paxocean.com",NULL,NULL,"Bairedla Viswanadham",NULL,0,NULL
+"514081de-6e50-47b4-8148-e9fcf5170e42",NULL,NULL,NULL,NULL,NULL,"bob.wong@paxocean.com",NULL,NULL,"Bob Wong",NULL,0,NULL
+"72404439-6439-46a7-81a8-fa473b843470",NULL,NULL,NULL,NULL,NULL,"darren.wong@paxocean.com",NULL,NULL,"Darren Wong",NULL,0,NULL
+"d66f2cc5-701f-4569-afd1-6b06947e667c",NULL,NULL,NULL,NULL,NULL,"tw.chan@paxocean.com",NULL,NULL,"Chan Tuck Wai",NULL,0,NULL
+"b3e3befb-b45b-4858-995e-e43affa6b14c",NULL,NULL,NULL,NULL,NULL,"engkiat.chua@kuokgroup.com.sg",NULL,NULL,"Chua Eng Kiat",NULL,0,NULL
+"4ace04a3-bc80-4ff7-964f-7ec0990c057a",NULL,NULL,NULL,NULL,NULL,"stephen.wang@kuokgroup.com.sg",NULL,NULL,"Stephen Wang",NULL,0,NULL
+"9c49665b-499e-4778-a8b2-8189073816fc",NULL,NULL,NULL,NULL,NULL,"manikandan.sakthivel@kuokgroup.com.sg",NULL,NULL,"Manikandan Sakthivel",NULL,0,NULL
+"de328ecc-aa9f-4979-a581-e9d6ed14762f",NULL,NULL,NULL,NULL,NULL,"songqin.sim@kuokgroup.com.sg",NULL,NULL,"Sim Song Qin",NULL,0,NULL
+"494a450c-a041-70cd-c2ea-f941edb35362","Cuong","Nguyen","Cuong","Tran Huu Trang","Male","nduycuong1@tma.com.vn","+840902465008",NULL,"Nguyen Cuong",NULL,0,NULL

@@ -1,0 +1,152 @@
+version: 0.2
+
+# TMA_PROD CodeBuild configuration for Lambda deployment
+# This buildspec is designed to work from the TMA_PROD/devops directory
+
+phases:
+  pre_build:
+    commands:
+      - echo "TMA_PROD Lambda deployment started on `date`"
+      - echo "Building Lambda functions and layers for TMA_PROD project..."
+      
+      # Install Node.js and npm
+      - curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+      - sudo apt-get install -y nodejs
+      - node --version
+      - npm --version
+      
+      # Install Terraform
+      - wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
+      - unzip terraform_1.5.0_linux_amd64.zip
+      - sudo mv terraform /usr/local/bin/
+      - terraform version
+      
+      # Set environment variables
+      - export AWS_DEFAULT_REGION=ap-southeast-1
+      - export RELEASE_DATE=$(date +"%m%d%Y")
+      - export ENVIRONMENT=${ENVIRONMENT:-prod}
+      - export S3_BUCKET=${S3_BUCKET}
+      - export PROJECT_NAME="TMA_PROD"
+      
+      # Create output directories
+      - mkdir -p ../../zipped-functions-layers-tmaprod/layers
+      
+      # Navigate to backend-services directory
+      - cd ../BE_sourceCodes/backend-services
+      
+      # Install dependencies
+      - npm install
+
+  build:
+    commands:
+      - echo "Build phase started on `date`"
+      
+      # Build functions if specified
+      - |
+        if [ -n "$DEPLOY_FUNCTIONS" ]; then
+          echo "Building functions: $DEPLOY_FUNCTIONS"
+          for func in $DEPLOY_FUNCTIONS; do
+            if [ -d "functions/$func" ]; then
+              echo "Building function: $func"
+              cd "functions/$func"
+              
+              # Install dependencies if package.json exists
+              if [ -f "package.json" ]; then
+                npm install --production
+              fi
+              
+              # Create zip file
+              zip -r "../../../zipped-functions-layers-tmaprod/wdr-$func.zip" . -x "node_modules/.cache/*" "*.log"
+              
+              echo "✅ Built: wdr-$func.zip"
+              cd ../..
+            else
+              echo "⚠️ Function directory not found: functions/$func"
+            fi
+          done
+        fi
+      
+      # Build layers if specified
+      - |
+        if [ -n "$DEPLOY_LAYERS" ]; then
+          echo "Building layers: $DEPLOY_LAYERS"
+          for layer in $DEPLOY_LAYERS; do
+            if [ -d "layers/$layer" ]; then
+              echo "Building layer: $layer"
+              cd "layers/$layer"
+              
+              # Install dependencies if package.json exists
+              if [ -f "package.json" ]; then
+                npm install --production
+              fi
+              
+              # Create zip file
+              zip -r "../../../zipped-functions-layers-tmaprod/layers/wdr-$layer-layer.zip" . -x "node_modules/.cache/*" "*.log"
+              
+              echo "✅ Built: wdr-$layer-layer.zip"
+              cd ../..
+            else
+              echo "⚠️ Layer directory not found: layers/$layer"
+            fi
+          done
+        fi
+
+  post_build:
+    commands:
+      - echo "Post-build phase started on `date`"
+      
+      # Upload to S3
+      - |
+        if [ -d "zipped-functions-layers-tmaprod" ]; then
+          echo "Uploading TMA_PROD artifacts to S3..."
+          aws s3 sync zipped-functions-layers-tmaprod/ s3://$S3_BUCKET/$ENVIRONMENT/release2.0/$RELEASE_DATE/ \
+            --exclude "*.log" \
+            --exclude "node_modules/.cache/*"
+          
+          echo "✅ Uploaded to S3: s3://$S3_BUCKET/$ENVIRONMENT/release2.0/$RELEASE_DATE/"
+        fi
+      
+      # Update Terraform configuration
+      - |
+        cd ../../devops/env/$ENVIRONMENT
+        
+        # Backup current config
+        cp infra.tfvars infra.tfvars.backup.$(date +%Y%m%d_%H%M%S)
+        
+        # Update function paths
+        if [ -n "$DEPLOY_FUNCTIONS" ]; then
+          for func in $DEPLOY_FUNCTIONS; do
+            sed -i "s|s3_key.*=.*\"lambda_functions/wdr-$func.zip\"|s3_key = \"$ENVIRONMENT/release2.0/$RELEASE_DATE/wdr-$func.zip\"|g" infra.tfvars
+          done
+        fi
+        
+        # Update layer paths
+        if [ -n "$DEPLOY_LAYERS" ]; then
+          for layer in $DEPLOY_LAYERS; do
+            sed -i "s|s3_key.*=.*\"layers/wdr-$layer-layer.zip\"|s3_key = \"$ENVIRONMENT/release2.0/$RELEASE_DATE/layers/wdr-$layer-layer.zip\"|g" infra.tfvars
+          done
+        fi
+        
+        echo "✅ Updated Terraform configuration for TMA_PROD"
+      
+      # Terraform operations
+      - |
+        cd ../../devops/env/$ENVIRONMENT
+        terraform init
+        terraform plan -out=tfplan
+        
+        if [ "$APPLY_CHANGES" = "true" ]; then
+          terraform apply -auto-approve tfplan
+          echo "✅ TMA_PROD deployment completed successfully"
+        else
+          echo "ℹ️ Terraform plan completed. Set APPLY_CHANGES=true to apply changes."
+        fi
+      
+      # Cleanup
+      - rm -rf ../../zipped-functions-layers-tmaprod/
+      - echo "🧹 Cleaned up temporary files"
+
+artifacts:
+  files:
+    - '**/*'
+  name: tmaprod-lambda-deployment-$(date +%Y%m%d-%H%M%S)

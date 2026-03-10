@@ -1,0 +1,21 @@
+name: Test Simple Workflow
+
+on:
+  push:
+    branches: [ 'vule/tma/prod-2.0.1-draft' ]
+    paths:
+      - 'TMA_PROD/devops/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Test step
+        run: |
+          echo "Hello from GitHub Actions!"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Workflow triggered successfully!"

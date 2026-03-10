@@ -1,0 +1,26 @@
+#set($inputRoot = $input.path('$'))
+{
+  "queryStringParameters": {
+    #foreach($key in $input.params().querystring.keySet())
+      "$key": "$util.escapeJavaScript($input.params().querystring.get($key))"#if($foreach.hasNext),#end
+    #end
+  },
+  "headers": {
+    "Authorization": "$util.escapeJavaScript($input.params().header.get('Authorization'))",
+    "Cookie": "$util.escapeJavaScript($input.params().header.get('Cookie'))"
+  },
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        #if($context.authorizer.claims)
+          #foreach($key in $context.authorizer.claims.keySet())
+            "$key": "$util.escapeJavaScript($context.authorizer.claims.get($key))"#if($foreach.hasNext),#end
+          #end
+        #end
+      }
+    },
+    "requestId": "$context.requestId",
+    "httpMethod": "$context.httpMethod",
+    "resourcePath": "$context.resourcePath"
+  }
+}
