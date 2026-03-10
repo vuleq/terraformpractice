@@ -12,6 +12,9 @@ account_id   = "797233058645" #change account id of customer
 dummy_lambda_code_bucket = "vule-s3-store-tfstates"
 dummy_lambda_code_key    = "dummy/lambda-placeholder.zip"
 
+# No VPC - Lambda chạy public (subnets cũ ap-southeast-1 không tồn tại ở us-east-2)
+vpc_config = null
+
 
 
 #LAMBDA FUNCTIONS
