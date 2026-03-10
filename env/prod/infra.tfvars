@@ -50,20 +50,20 @@ lambda_definitions = {
   }
 }
 
-#  lambda_3 = {
-#     function_name = "prod-wdr-maritimeapps-deploy-ld-project-get-dashboard-data"
-#     runtime       = "nodejs22.x"
-#     handler       = "index.handler"
-#     timeout       = 60
-#     memory_size   = 128
-#     env_vars = {
-#       STAGE = "prod"
-# 
-#     }
-#     # s3_bucket = "prod-wdr-maritimeapps-deploy-store-lambdasources"
-#     # s3_key = "prod/release2.0/10282025/wdr-project-get-dashboard-data.zip"
-#     layers = ["connect_db_v35", "models_v35","common_utils", "error_codes_v35", "AWS-Parameters-and-Secrets-Lambda-Extension"]  
-#   },
+ lambda_3 = {
+    function_name = "vule-project-get-dashboard-data"
+    runtime       = "nodejs22.x"
+    handler       = "index.handler"
+    timeout       = 60
+    memory_size   = 128
+    env_vars = {
+      STAGE = "prod"
+
+    }
+    # s3_bucket = "prod-wdr-maritimeapps-deploy-store-lambdasources"
+    # s3_key = "prod/release2.0/10282025/wdr-project-get-dashboard-data.zip"
+    layers = ["connect_db_v35", "models_v35","common_utils", "error_codes_v35", "AWS-Parameters-and-Secrets-Lambda-Extension"]  
+  },
 #   lambda_4 = {
 #     function_name = "prod-wdr-maritimeapps-deploy-ld-pro-get-history-by-pro-id"
 #     runtime       = "nodejs22.x"
